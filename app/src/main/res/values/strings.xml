@@ -1,0 +1,25 @@
+<resources>
+    <string name="app_name">ButcherPDA</string>
+    <string name="assembly_title">Enter Details</string>
+    <string name="settings_title">Settings</string>
+    <string name="select_title">New Batch</string>
+    <string name="summary_title">Summary</string>
+    <string name="search_title">Find Batch</string>
+    <string name="details_title">Details</string>
+    <string name="back_label">Back</string>
+    <string name="save_label">Save</string>
+    <string name="search_label">Search</string>
+    <string name="error_message">An error occurred</string>
+    <string name="retry_label">Retry</string>
+    <string name="no_results">No results</string>
+    <string name="continue_label">Continue</string>
+    <string name="invalid_label">Invalid value</string>
+    <string name="select_label">Select</string>
+    <string name="bom_label">BOM</string>
+    <string name="none_label">None</string>
+    <string name="cancel_label">Cancel</string>
+    <string name="quantity_label">Quantity</string>
+    <string name="explode_label">Explode</string>
+    <string name="expiry_label">Expires in</string>
+    <string name="days">days</string>
+</resources>
