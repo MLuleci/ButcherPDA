@@ -1,11 +1,11 @@
 package bg.butcher.pda.fake
 
 import bg.butcher.pda.model.BatchDetails
-import bg.butcher.pda.model.BomDetails
+import bg.butcher.pda.model.BomDetailsWrapper
 import bg.butcher.pda.model.BomSearchResult
 import bg.butcher.pda.model.ManufactureEntry
 import bg.butcher.pda.network.ErpService
-import java.util.Date
+import kotlinx.datetime.LocalDate
 
 class FakeErpService: ErpService {
     override suspend fun seachBom(options: Map<String, String>): BomSearchResult {
@@ -23,15 +23,15 @@ class FakeErpService: ErpService {
         bom: String,
         quantity: Float,
         explode: Boolean
-    ): BomDetails {
-        return FakeDataSource.bomDetails
+    ): BomDetailsWrapper {
+        return BomDetailsWrapper(FakeDataSource.bomDetails)
     }
 
     override suspend fun createManufactureEntry(
         bom: String,
         quantity: Float,
         items: Map<String, Map<String, Float>>,
-        expiryDate: Date?,
+        expiryDate: LocalDate?,
         explode: Boolean,
         isFinished: Boolean
     ): ManufactureEntry {
