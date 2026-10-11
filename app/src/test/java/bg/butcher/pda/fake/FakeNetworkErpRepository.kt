@@ -6,7 +6,7 @@ import bg.butcher.pda.model.BomDetails
 import bg.butcher.pda.model.BomSearchResult
 import bg.butcher.pda.model.BomSearchResultItem
 import bg.butcher.pda.model.ManufactureEntry
-import java.util.Date
+import kotlinx.datetime.LocalDate
 
 class FakeNetworkErpRepository : ErpRepository {
     override suspend fun searchBom(query: String): Result<List<BomSearchResultItem>> {
@@ -29,7 +29,7 @@ class FakeNetworkErpRepository : ErpRepository {
         bom: String,
         quantity: Float,
         items: Map<String, Map<String, Float>>,
-        expiryDate: Date?,
+        expiryDate: LocalDate?,
         explode: Boolean,
         isFinished: Boolean
     ): Result<ManufactureEntry> {

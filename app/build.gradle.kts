@@ -7,14 +7,12 @@ plugins {
 android {
     namespace = "bg.butcher.pda"
     compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
+        version = release(37)
     }
 
     defaultConfig {
         applicationId = "bg.butcher.pda"
-        minSdk = 26
+        minSdk = 23 // Target PDAs are stuck on Android 6.0
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -38,10 +36,13 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        // kotlinx-datetime is backed by java.time, which only exists on API 26+
+        isCoreLibraryDesugaringEnabled = true
     }
 }
 
 dependencies {
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.navigation.compose)
@@ -67,6 +68,7 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.coil.compose)
     implementation(libs.okhttp)
+    implementation(libs.okhttp.tls)
     implementation(libs.kotlinx.serialization.json)
 
     testImplementation(libs.kotlinx.coroutines.test)

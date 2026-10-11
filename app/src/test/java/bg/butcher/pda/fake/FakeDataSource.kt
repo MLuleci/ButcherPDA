@@ -39,6 +39,7 @@ object FakeDataSource {
         name = bomName,
         item = fgItem,
         itemName = fgItemName,
+        uom = "Nos",
         isDefault = 1,
     )
     val bomSearchResult = BomSearchResult(

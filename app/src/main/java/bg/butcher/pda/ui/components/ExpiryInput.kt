@@ -18,9 +18,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import bg.butcher.pda.ui.theme.AppTheme
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.toLocalDateTime
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
+import java.text.DateFormat
+import java.util.Date
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 
@@ -72,11 +73,12 @@ fun ExpiryPicker(
             modifier = modifier
         )
         if (value != null) {
-            val formatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
-            val format = formatter.toFormat()
+            val format = DateFormat.getDateInstance(DateFormat.MEDIUM)
             val date = dateFromToday(value)
+                .atStartOfDayIn(TimeZone.currentSystemDefault())
+                .toEpochMilliseconds()
             Text(
-                text = format.format(date),
+                text = format.format(Date(date)),
                 style = MaterialTheme.typography.labelMedium
             )
         }
