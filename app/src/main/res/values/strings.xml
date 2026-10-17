@@ -22,4 +22,8 @@
     <string name="explode_label">Explode</string>
     <string name="expiry_label">Expires in</string>
     <string name="days">days</string>
+    <string name="batch_label">Batch</string>
+    <string name="amount_label">Amount</string>
+    <string name="submit_label">Submit</string>
+    <string name="invalid_batch_no">Invalid batch number</string>
 </resources>

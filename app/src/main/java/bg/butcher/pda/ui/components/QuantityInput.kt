@@ -1,21 +1,22 @@
 package bg.butcher.pda.ui.components
 
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.then
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+import bg.butcher.pda.R
 import bg.butcher.pda.ui.theme.AppTheme
 
 @Composable
@@ -23,8 +24,9 @@ fun QuantityInput(
     uom: String,
     onValueChanged: (Float) -> Unit,
     modifier: Modifier = Modifier,
+    initialValue: Float? = null,
 ) {
-    val state = rememberTextFieldState()
+    val state = rememberTextFieldState(initialValue?.toString() ?: "")
     val text = state.text.toString()
     val value = text.toFloatOrNull()
 
@@ -33,7 +35,8 @@ fun QuantityInput(
             onValueChanged(value)
         }
     }
-    TextField(
+    OutlinedTextField(
+        label = { Text(stringResource(R.string.quantity_label)) },
         state = state,
         lineLimits = TextFieldLineLimits.SingleLine,
         keyboardOptions = KeyboardOptions(
@@ -42,7 +45,9 @@ fun QuantityInput(
             imeAction = ImeAction.Done,
         ),
         trailingIcon = {
-            Text(uom, style = MaterialTheme.typography.labelSmall)
+            if (uom.isNotEmpty()) {
+                Text(uom, style = MaterialTheme.typography.labelSmall)
+            }
         },
         inputTransformation = InputTransformation.then {
             val text = toString()
@@ -53,7 +58,7 @@ fun QuantityInput(
                 }
             }
         },
-        modifier = modifier.width(130.dp)
+        modifier = modifier
     )
 }
 
@@ -61,6 +66,6 @@ fun QuantityInput(
 @Composable
 fun QuantityInputPreview() {
     AppTheme {
-        QuantityInput("Kgs", {})
+        QuantityInput( "Kgs", {})
     }
 }

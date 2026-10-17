@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -12,11 +13,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import bg.butcher.pda.R
-import bg.butcher.pda.ui.theme.AppTheme
 
 @Composable
 fun ValidatedTextField(
@@ -45,51 +44,28 @@ fun ValidatedTextField(
 }
 
 @Composable
-fun SettingsScreenBody(
-    state: SettingsUiState,
-    onUrlChanged: (String) -> Unit,
-    onKeyChanged: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column (modifier = modifier) {
-        ValidatedTextField(
-            label = "API URL",
-            state = state.baseUrl,
-            onChanged = onUrlChanged
-        )
-        ValidatedTextField(
-            label = "API Key",
-            state = state.apiKey,
-            onChanged = onKeyChanged
-        )
-    }
-}
-
-@Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory),
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    SettingsScreenBody(
-        state = uiState,
-        onUrlChanged = { viewModel.setBaseUrl(it) },
-        onKeyChanged = { viewModel.setApiKey(it) },
-        modifier = modifier,
-    )
-}
-
-@Preview
-@Composable
-fun SettingsScreenBodyPreview() {
-    AppTheme {
-        SettingsScreenBody(
-            state = SettingsUiState(
-                baseUrl = SettingState("http://localhost/", true),
-                apiKey = SettingState("dummy_key",false),
-            ),
-            onUrlChanged = {},
-            onKeyChanged = {}
+    val canSave = viewModel.isValid() && uiState.isDirty
+    Column (modifier = modifier) {
+        ValidatedTextField(
+            label = "API URL",
+            state = uiState.baseUrl,
+            onChanged = { viewModel.setBaseUrl(it) }
         )
+        ValidatedTextField(
+            label = "API Key",
+            state = uiState.apiKey,
+            onChanged = { viewModel.setApiKey(it) }
+        )
+        Button(
+            onClick = { viewModel.save() },
+            enabled = canSave
+        ) {
+            Text(stringResource(R.string.save_label))
+        }
     }
 }

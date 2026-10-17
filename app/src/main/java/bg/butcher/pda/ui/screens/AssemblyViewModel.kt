@@ -1,14 +1,17 @@
 package bg.butcher.pda.ui.screens
 
 import android.util.Log
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import bg.butcher.pda.MainApplication
 import bg.butcher.pda.data.ErpRepository
+import bg.butcher.pda.model.BatchDetails
 import bg.butcher.pda.model.BomDetails
 import bg.butcher.pda.model.BomSearchResultItem
 import bg.butcher.pda.model.ManufactureEntry
@@ -25,11 +28,12 @@ import kotlin.time.Duration.Companion.milliseconds
 
 data class AssemblyUiState(
     // Search page:
-    val searchState: NetworkState<List<BomSearchResultItem>> = NetworkState(status = NetworkStatus.IDLE),
+    val bomSearchState: NetworkState<List<BomSearchResultItem>> = NetworkState(status = NetworkStatus.IDLE),
     val bomSelected: BomSearchResultItem? = null,
 
     // Input page:
-    val fetchState: NetworkState<BomDetails> = NetworkState(status = NetworkStatus.IDLE),
+    val bomFetchState: NetworkState<BomDetails> = NetworkState(status = NetworkStatus.IDLE),
+    val batchFetchState: NetworkState<BatchDetails> = NetworkState(status = NetworkStatus.IDLE),
     val quantity: Float = 0.0f,
     val items: Map<String, Map<String, Float>> = mapOf(),
     val daysUntilExpiry: Int = 0,
@@ -40,13 +44,13 @@ data class AssemblyUiState(
     val submitState: NetworkState<ManufactureEntry> = NetworkState(status = NetworkStatus.IDLE),
 )
 
-class AssemblyViewModel(private val erpRepository: ErpRepository): ViewModel() {
-    private val _uiState = MutableStateFlow(AssemblyUiState())
+class AssemblyViewModel(private val erpRepository: ErpRepository, private val state: SavedStateHandle): ViewModel() {
+    private val _uiState = state.getMutableStateFlow("AssemblyForm", AssemblyUiState())
     val uiState: StateFlow<AssemblyUiState> = _uiState.asStateFlow()
 
     private val bomSearchJob = JobSlot(viewModelScope)
     private val bomFetchJob = JobSlot(viewModelScope)
-    private val batchSearchJob = JobSlot(viewModelScope)
+    private val batchFetchJob = JobSlot(viewModelScope)
     private val submitJob = JobSlot(viewModelScope)
 
     fun reset() {
@@ -55,16 +59,16 @@ class AssemblyViewModel(private val erpRepository: ErpRepository): ViewModel() {
 
     fun searchForBom(query: String) {
         if (query.isBlank()) {
-            _uiState.update { it.copy(searchState = NetworkState()) }
+            _uiState.update { it.copy(bomSearchState = NetworkState()) }
             bomSearchJob.cancel()
         } else {
             bomSearchJob.replace(300.milliseconds) {
-                _uiState.update { it.copy(searchState = NetworkState(status = NetworkStatus.PENDING)) }
+                _uiState.update { it.copy(bomSearchState = NetworkState(status = NetworkStatus.PENDING)) }
                 erpRepository.searchBom(query)
-                    .onSuccess { results -> _uiState.update { it.copy(searchState = NetworkState.withSuccess(results)) } }
+                    .onSuccess { results -> _uiState.update { it.copy(bomSearchState = NetworkState.withSuccess(results)) } }
                     .onFailure { e ->
                         Log.e("AssemblyViewModel", "searchForBom", e)
-                        _uiState.update { it.copy(searchState = NetworkState.withError(e)) }
+                        _uiState.update { it.copy(bomSearchState = NetworkState.withError(e)) }
                     }
             }
         }
@@ -72,16 +76,33 @@ class AssemblyViewModel(private val erpRepository: ErpRepository): ViewModel() {
 
     fun fetchBomDetails(name: String, quantity: Float = 1f, explode: Boolean = false) {
         if (name.isBlank()) {
-            _uiState.update { it.copy(fetchState = NetworkState()) }
+            _uiState.update { it.copy(bomFetchState = NetworkState()) }
             bomSearchJob.cancel()
         } else {
             bomFetchJob.replace {
-                _uiState.update { it.copy(fetchState = NetworkState(status = NetworkStatus.PENDING)) }
+                _uiState.update { it.copy(bomFetchState = NetworkState(status = NetworkStatus.PENDING)) }
                 erpRepository.getBomDetails(name, quantity, explode)
-                    .onSuccess { results -> _uiState.update { it.copy(fetchState = NetworkState.withSuccess(results)) } }
+                    .onSuccess { results -> _uiState.update { it.copy(bomFetchState = NetworkState.withSuccess(results)) } }
                     .onFailure { e ->
                         Log.e("AssemblyViewModel", "fetchBomDetails", e)
-                        _uiState.update { it.copy(fetchState = NetworkState.withError(e)) }
+                        _uiState.update { it.copy(bomFetchState = NetworkState.withError(e)) }
+                    }
+            }
+        }
+    }
+
+    fun fetchBatchDetails(batchNumber: String) {
+        if (batchNumber.isBlank()) {
+            _uiState.update { it.copy(batchFetchState = NetworkState()) }
+            batchFetchJob.cancel()
+        } else {
+            batchFetchJob.replace(300.milliseconds) {
+                _uiState.update { it.copy(batchFetchState = NetworkState(status = NetworkStatus.PENDING)) }
+                erpRepository.getBatch(batchNumber)
+                    .onSuccess { results -> _uiState.update { it.copy(batchFetchState = NetworkState.withSuccess(results)) } }
+                    .onFailure { e ->
+                        Log.e("AssemblyViewModel", "fetchBatchDetails", e)
+                        _uiState.update { it.copy(batchFetchState = NetworkState.withError(e)) }
                     }
             }
         }
@@ -92,7 +113,7 @@ class AssemblyViewModel(private val erpRepository: ErpRepository): ViewModel() {
     }
 
     fun setQuantity(quantity: Float) {
-        require(quantity > 0.0f) { "Quantity cannot be zero or negative, was $quantity" }
+        require(quantity > 0f) { "Quantity cannot be zero or negative, was $quantity" }
         _uiState.update { it.copy(quantity = quantity) }
     }
 
@@ -112,7 +133,7 @@ class AssemblyViewModel(private val erpRepository: ErpRepository): ViewModel() {
     fun upsertBatch(itemCode: String, batchNumber: String, quantity: Float) {
         require(itemCode.isNotEmpty()) { "Item code cannot be empty" }
         require(batchNumber.isNotEmpty()) { "Batch number cannot be empty" }
-        require(quantity > 0.0f) { "Quantity cannot be zero or negative, was $quantity" }
+        require(quantity > 0f) { "Quantity cannot be zero or negative, was $quantity" }
         _uiState.update { currentState ->
             val items = currentState.items.toMutableMap()
             val batches = items[itemCode]?.toMutableMap() ?: mutableMapOf()
@@ -148,8 +169,9 @@ class AssemblyViewModel(private val erpRepository: ErpRepository): ViewModel() {
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
+                val savedStateHandle = createSavedStateHandle()
                 val application = (this[APPLICATION_KEY] as MainApplication)
-                AssemblyViewModel(erpRepository = application.container.erpRepository)
+                AssemblyViewModel(erpRepository = application.container.erpRepository, state = savedStateHandle)
             }
         }
     }

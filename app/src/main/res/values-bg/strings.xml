@@ -23,4 +23,8 @@
     <string name="explode_label">Експлодирам</string>
     <string name="expiry_label">Изтича след</string>
     <string name="days">дни</string>
+    <string name="batch_label">Партида</string>
+    <string name="amount_label">Сума</string>
+    <string name="submit_label">Изпрати</string>
+    <string name="invalid_batch_no">Невалиден номер на партида</string>
 </resources>

@@ -13,7 +13,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun RowWithLabel(
     @StringRes label: Int,
-    item: @Composable () -> Unit,
+    content: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -22,6 +22,6 @@ fun RowWithLabel(
         modifier = modifier
     ) {
         Text(stringResource(label))
-        item()
+        content()
     }
 }

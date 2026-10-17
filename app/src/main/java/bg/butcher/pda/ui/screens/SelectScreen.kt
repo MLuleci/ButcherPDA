@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
@@ -11,9 +12,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.input.rememberTextFieldState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
@@ -65,7 +66,8 @@ fun BomSearch(
 ) {
     val state = rememberTextFieldState()
     val query = state.text.toString()
-    var selectedItem: BomSearchResultItem? by rememberSaveable { mutableStateOf(null) }
+    var selectedItem: BomSearchResultItem? by remember { mutableStateOf(null) }
+    val minHeight = if (searchState.status == NetworkStatus.IDLE) { 0.dp } else { 100.dp }
 
     LaunchedEffect(query) {
         selectedItem = null
@@ -76,70 +78,68 @@ fun BomSearch(
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.heightIn(100.dp, 500.dp).fillMaxWidth()
+            modifier = Modifier.heightIn(minHeight, 500.dp).fillMaxWidth()
         ) {
             when (searchState.status) {
-                NetworkStatus.IDLE -> Unit
+                NetworkStatus.IDLE -> {}
                 NetworkStatus.ERROR -> ErrorMessage(onRetry = { onQueryChanged(query) })
                 NetworkStatus.PENDING -> CircularProgressIndicator()
                 NetworkStatus.SUCCESS -> {
-                    val items = searchState.result.orEmpty()
-                    if (items.isEmpty()) {
+                    val result = searchState.result.orEmpty()
+                    if (result.isEmpty()) {
                         Text(stringResource(R.string.no_results))
                     } else {
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .verticalScroll(rememberScrollState())
-                        ) {
-                            items.forEachIndexed { index, item ->
-                                val focusRequester = remember { FocusRequester() }
-                                val isSelected = item.name == selectedItem?.name
-                                val color = if (isSelected) {
-                                    MaterialTheme.colorScheme.primary
-                                } else if (index % 2 == 0) {
-                                    MaterialTheme.colorScheme.surfaceBright
-                                } else {
-                                    MaterialTheme.colorScheme.surfaceDim
-                                }
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .focusRequester(focusRequester)
-                                        .focusable()
-                                        .clickable(
-                                            role = Role.Button,
-                                            onClick = {
-                                                selectedItem = item
-                                                focusRequester.requestFocus()
-                                            }
-                                        )
-                                        .background(color),
-                                ) {
-                                    Column(modifier = Modifier.padding(10.dp).weight(1f)) {
-                                        Text(
-                                            text = item.itemName,
-                                            style = MaterialTheme.typography.bodyLarge
-                                        )
-                                        Text(
-                                            text = "${item.name} (${item.uom})",
-                                            style = MaterialTheme.typography.labelSmall
-                                        )
+                        Box(modifier = Modifier.weight(1f)) {
+                            LazyColumn {
+                                itemsIndexed(result, key = { _, i -> i.name }) { index, item ->
+                                    val focusRequester = remember { FocusRequester() }
+                                    val isSelected = item.name == selectedItem?.name
+                                    val color = if (isSelected) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else if (index % 2 == 0) {
+                                        MaterialTheme.colorScheme.surfaceBright
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceDim
                                     }
-                                    if (item.isDefault == 1) {
-                                        val tint = if (isSelected) {
-                                            MaterialTheme.colorScheme.onPrimary
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurface
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .focusRequester(focusRequester)
+                                            .focusable()
+                                            .clickable(
+                                                role = Role.Button,
+                                                onClick = {
+                                                    selectedItem = item
+                                                    focusRequester.requestFocus()
+                                                }
+                                            )
+                                            .background(color),
+                                    ) {
+                                        Column(modifier = Modifier.padding(10.dp).weight(1f)) {
+                                            Text(
+                                                text = item.itemName,
+                                                style = MaterialTheme.typography.bodyLarge
+                                            )
+                                            Text(
+                                                text = "${item.name} (${item.uom})",
+                                                style = MaterialTheme.typography.labelSmall
+                                            )
                                         }
-                                        Icon(
-                                            imageVector = Icons.Default.Star,
-                                            tint = tint,
-                                            contentDescription = "Default",
-                                            modifier = Modifier.padding(end = 10.dp)
-                                        )
+                                        if (item.isDefault == 1) {
+                                            val tint = if (isSelected) {
+                                                MaterialTheme.colorScheme.onPrimary
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurface
+                                            }
+                                            Icon(
+                                                imageVector = Icons.Default.Star,
+                                                tint = tint,
+                                                contentDescription = "Default",
+                                                modifier = Modifier.padding(end = 10.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -183,13 +183,13 @@ fun BomSelect(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
-    var showBottomSheet by remember { mutableStateOf(false) }
+    var showBottomSheet by rememberSaveable { mutableStateOf(false) }
 
     TextButton(
         onClick = { showBottomSheet = true },
         modifier = modifier,
     ) {
-        Text(bomSelected?.name ?: stringResource(R.string.none_label))
+        Text(bomSelected?.let { "${it.itemName} (${it.name})" } ?: stringResource(R.string.none_label))
     }
     if (showBottomSheet) {
         ModalBottomSheet(
@@ -227,27 +227,22 @@ fun SelectScreen(
     ) {
         RowWithLabel(
             label = R.string.bom_label,
-            item = {
+            content = {
                 BomSelect(
                     onQueryChanged = { viewModel.searchForBom(it) },
                     onSelect = { viewModel.setSelectedBom(it) },
                     bomSelected = uiState.bomSelected,
-                    searchState = uiState.searchState,
+                    searchState = uiState.bomSearchState,
                 )
             }
         )
-        RowWithLabel(
-            label = R.string.quantity_label,
-            item = {
-                QuantityInput(
-                    uom = uiState.bomSelected?.uom ?: "Kgs",
-                    onValueChanged = { viewModel.setQuantity(it) }
-                )
-            }
+        QuantityInput(
+            uom = uiState.bomSelected?.uom ?: "Kgs",
+            onValueChanged = { viewModel.setQuantity(it) }
         )
         RowWithLabel(
             label = R.string.explode_label,
-            item = {
+            content = {
                 Checkbox(
                     checked = uiState.explode,
                     onCheckedChange = { viewModel.setExplode(it) }
@@ -272,7 +267,7 @@ fun BomSelect_None_Preview() {
     AppTheme {
         RowWithLabel(
             label = R.string.bom_label,
-            item = {
+            content = {
                 BomSelect(
                     onQueryChanged = {},
                     onSelect = {},
@@ -290,7 +285,7 @@ fun BomSelect_Some_Preview() {
     AppTheme {
         RowWithLabel(
             label = R.string.bom_label,
-            item = {
+            content = {
                 BomSelect(
                     onQueryChanged = {},
                     onSelect = {},
@@ -366,6 +361,11 @@ fun BomSearch_ResultList_Preview() {
             searchState = NetworkState.withSuccess(listOf(
                 BomSearchResultItem("BOM.001", "SKU.001", "Meatballs with a stupid long name that may overflow", "Nos", 1),
                 BomSearchResultItem("BOM.002", "SKU.002", "Mince Meat", "Kgs", 1),
+                BomSearchResultItem("BOM.003", "SKU.003", "Kebabs", "Kgs", 1),
+                BomSearchResultItem("BOM.003", "SKU.003", "Kebabs", "Kgs", 1),
+                BomSearchResultItem("BOM.003", "SKU.003", "Kebabs", "Kgs", 1),
+                BomSearchResultItem("BOM.003", "SKU.003", "Kebabs", "Kgs", 1),
+                BomSearchResultItem("BOM.003", "SKU.003", "Kebabs", "Kgs", 1),
                 BomSearchResultItem("BOM.003", "SKU.003", "Kebabs", "Kgs", 1),
             )),
         )

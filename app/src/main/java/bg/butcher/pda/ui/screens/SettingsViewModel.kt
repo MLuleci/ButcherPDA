@@ -14,8 +14,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -25,6 +23,7 @@ data class SettingState(
 )
 
 data class SettingsUiState(
+    val isDirty: Boolean = false,
     val baseUrl: SettingState = SettingState(),
     val apiKey: SettingState = SettingState(),
 )
@@ -34,12 +33,6 @@ class SettingsViewModel(private val settingsRepository: SettingsRepository): Vie
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
     init {
-        // Update settings each time UI state changes
-        _uiState.onEach {
-            val newSettings = PdaSettings(it.baseUrl.value, it.apiKey.value)
-            settingsRepository.update(newSettings)
-        }.launchIn(viewModelScope)
-
         // Initialize UI state from settings only once
         viewModelScope.launch {
             val settings = settingsRepository.settings.first()
@@ -53,11 +46,39 @@ class SettingsViewModel(private val settingsRepository: SettingsRepository): Vie
     }
 
     fun setBaseUrl(url: String) {
-        _uiState.update { it.copy(baseUrl = SettingState(url, URLUtil.isValidUrl(url))) }
+        _uiState.update {
+            it.copy(
+                isDirty = true,
+                baseUrl = SettingState(url, URLUtil.isValidUrl(url))
+            )
+        }
     }
 
     fun setApiKey(key: String) {
-        _uiState.update { it.copy(apiKey = SettingState(key, key.isNotBlank())) }
+        _uiState.update {
+            it.copy(
+                isDirty = true,
+                apiKey = SettingState(key, key.isNotBlank())
+            )
+        }
+    }
+
+    fun isValid(): Boolean {
+        return _uiState.value.baseUrl.isValid && _uiState.value.apiKey.isValid
+    }
+
+    fun save() {
+        if (isValid()) {
+            _uiState.update { it.copy(isDirty = false) }
+            viewModelScope.launch {
+                settingsRepository.update(
+                    PdaSettings(
+                        _uiState.value.baseUrl.value,
+                        _uiState.value.apiKey.value
+                    )
+                )
+            }
+        }
     }
 
     companion object {

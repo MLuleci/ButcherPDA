@@ -18,8 +18,8 @@ import bg.butcher.pda.R
 
 @Composable
 fun ErrorMessage(
-    onRetry: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onRetry: (() -> Unit)? = null,
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -30,16 +30,18 @@ fun ErrorMessage(
             text = stringResource(R.string.error_message),
             color = MaterialTheme.colorScheme.error
         )
-        TextButton(onClick = onRetry) {
-            Icon(
-                imageVector = Icons.Default.Refresh,
-                contentDescription = "Retry",
-                modifier = Modifier.size(15.dp),
-            )
-            Text(
-                text = stringResource(R.string.retry_label).uppercase(),
-                style = MaterialTheme.typography.labelMedium,
-            )
+        if (onRetry != null) {
+            TextButton(onClick = onRetry) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = "Retry",
+                    modifier = Modifier.size(15.dp),
+                )
+                Text(
+                    text = stringResource(R.string.retry_label).uppercase(),
+                    style = MaterialTheme.typography.labelMedium,
+                )
+            }
         }
     }
 }

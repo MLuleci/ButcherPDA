@@ -7,14 +7,17 @@ import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.then
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
+import bg.butcher.pda.R
 import bg.butcher.pda.ui.theme.AppTheme
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -33,21 +36,22 @@ fun dateFromToday(n: Int): LocalDate {
 }
 
 @Composable
-fun ExpiryPicker(
+fun ExpiryInput(
     onValueChanged: (Int) -> Unit,
     modifier: Modifier = Modifier,
-    initialValue: Int = 0,
+    initialValue: Int? = null,
 ) {
-    val state = rememberTextFieldState(initialValue.toString())
+    val state = rememberTextFieldState(initialValue?.toString() ?: "")
     val text = state.text.toString()
     val value = text.toIntOrNull()
     LaunchedEffect(value) {
-        if (value != null && value >= 0) {
+        if (value != null && value > 0) {
             onValueChanged(value)
         }
     }
     Column {
-        TextField(
+        OutlinedTextField(
+            label = { Text(stringResource(R.string.expiry_label)) },
             state = state,
             lineLimits = TextFieldLineLimits.SingleLine,
             keyboardOptions = KeyboardOptions(
@@ -73,13 +77,13 @@ fun ExpiryPicker(
             modifier = modifier
         )
         if (value != null) {
-            val format = DateFormat.getDateInstance(DateFormat.MEDIUM)
+            val format = DateFormat.getDateInstance(DateFormat.FULL)
             val date = dateFromToday(value)
                 .atStartOfDayIn(TimeZone.currentSystemDefault())
                 .toEpochMilliseconds()
             Text(
                 text = format.format(Date(date)),
-                style = MaterialTheme.typography.labelMedium
+                style = MaterialTheme.typography.labelSmall
             )
         }
     }
@@ -87,9 +91,9 @@ fun ExpiryPicker(
 
 @Preview(showBackground = true)
 @Composable
-fun ExpiryPickerPreview() {
+fun ExpiryInputPreview() {
     AppTheme {
-        ExpiryPicker(
+        ExpiryInput(
             onValueChanged = {},
             initialValue = 5
         )

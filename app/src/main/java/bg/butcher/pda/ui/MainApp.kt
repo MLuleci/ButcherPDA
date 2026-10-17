@@ -121,7 +121,8 @@ fun MainApp(
                 val parentViewModel: AssemblyViewModel = viewModel(parentEntry)
                 AssemblyScreen(
                     viewModel = parentViewModel,
-                    onSubmit = {}
+                    onSubmit = {},
+                    modifier = Modifier.fillMaxSize()
                 )
             }
         }
