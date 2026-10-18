@@ -1,27 +1,8 @@
 package bg.butcher.pda.network
 
-enum class NetworkStatus {
-    IDLE, PENDING, SUCCESS, ERROR
-}
-
-data class NetworkState<T>(
-    var status: NetworkStatus = NetworkStatus.IDLE,
-    var result: T? = null,
-    var error: Throwable? = null,
-) {
-    companion object {
-        fun <T> withSuccess(value: T): NetworkState<T> {
-            return NetworkState(
-                status = NetworkStatus.SUCCESS,
-                result = value,
-            )
-        }
-
-        fun <T> withError(value: Throwable): NetworkState<T> {
-            return NetworkState(
-                status = NetworkStatus.ERROR,
-                error = value,
-            )
-        }
-    }
+sealed interface NetworkState<out T> {
+    data object Idle : NetworkState<Nothing>
+    data object Loading : NetworkState<Nothing>
+    data class Success<T>(val data: T) : NetworkState<T>
+    data class Error(val message: String? = null) : NetworkState<Nothing>
 }

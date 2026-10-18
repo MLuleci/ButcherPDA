@@ -9,7 +9,7 @@
     <string name="back_label">Back</string>
     <string name="save_label">Save</string>
     <string name="search_label">Search</string>
-    <string name="error_message">An error occurred</string>
+    <string name="error_message">An error occurred, please try again.</string>
     <string name="retry_label">Retry</string>
     <string name="no_results">No results</string>
     <string name="continue_label">Continue</string>
@@ -26,4 +26,8 @@
     <string name="amount_label">Amount</string>
     <string name="submit_label">Submit</string>
     <string name="invalid_batch_no">Invalid batch number</string>
+    <string name="invalid_number">Enter a valid number.</string>
+    <string name="must_be_positive">Number must be greater than zero.</string>
+    <string name="value_required">A value is required.</string>
+    <string name="incomplete_message">Please fill in the required fields.</string>
 </resources>

@@ -2,16 +2,10 @@ package bg.butcher.pda.ui.components
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.input.InputTransformation
-import androidx.compose.foundation.text.input.TextFieldLineLimits
-import androidx.compose.foundation.text.input.rememberTextFieldState
-import androidx.compose.foundation.text.input.then
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -35,25 +29,33 @@ fun dateFromToday(n: Int): LocalDate {
         .date
 }
 
+fun validateDays(text: String): Int? {
+    if (text.isBlank()) {
+        return R.string.value_required
+    }
+
+    val value = text.toFloatOrNull()
+        ?: return R.string.invalid_number
+
+    if (!value.isFinite() || value <= 0f) {
+        return R.string.must_be_positive
+    }
+
+    return null
+}
+
 @Composable
 fun ExpiryInput(
-    onValueChanged: (Int) -> Unit,
+    value: String,
+    onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
-    initialValue: Int? = null,
 ) {
-    val state = rememberTextFieldState(initialValue?.toString() ?: "")
-    val text = state.text.toString()
-    val value = text.toIntOrNull()
-    LaunchedEffect(value) {
-        if (value != null && value > 0) {
-            onValueChanged(value)
-        }
-    }
+    val error = validateDays(value)
     Column {
         OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
             label = { Text(stringResource(R.string.expiry_label)) },
-            state = state,
-            lineLimits = TextFieldLineLimits.SingleLine,
             keyboardOptions = KeyboardOptions(
                 autoCorrectEnabled = false,
                 keyboardType = KeyboardType.Decimal,
@@ -65,27 +67,22 @@ fun ExpiryInput(
                     style = MaterialTheme.typography.labelSmall
                 )
             },
-            inputTransformation = InputTransformation.then {
-                val text = toString()
-                if (text.isNotEmpty()) {
-                    val value = text.toIntOrNull()
-                    if (value == null || value < 0) {
-                        revertAllChanges()
+            isError = error != null,
+            supportingText = {
+                if (error != null) {
+                    Text(stringResource(error), color = MaterialTheme.colorScheme.error)
+                } else {
+                    value.toIntOrNull()?.let {
+                        val dateFormat = DateFormat.getDateInstance(DateFormat.FULL)
+                        val date = dateFromToday(it)
+                            .atStartOfDayIn(TimeZone.currentSystemDefault())
+                            .toEpochMilliseconds()
+                        Text(dateFormat.format(Date(date)))
                     }
                 }
             },
             modifier = modifier
         )
-        if (value != null) {
-            val format = DateFormat.getDateInstance(DateFormat.FULL)
-            val date = dateFromToday(value)
-                .atStartOfDayIn(TimeZone.currentSystemDefault())
-                .toEpochMilliseconds()
-            Text(
-                text = format.format(Date(date)),
-                style = MaterialTheme.typography.labelSmall
-            )
-        }
     }
 }
 
@@ -94,8 +91,8 @@ fun ExpiryInput(
 fun ExpiryInputPreview() {
     AppTheme {
         ExpiryInput(
-            onValueChanged = {},
-            initialValue = 5
+            value = "5",
+            onValueChange = {},
         )
     }
 }

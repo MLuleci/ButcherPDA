@@ -10,7 +10,7 @@
     <string name="back_label">Назад</string>
     <string name="save_label">Запазване</string>
     <string name="search_label">Search</string>
-    <string name="error_message">Възникна грешка</string>
+    <string name="error_message">Възникна грешка, моля, опитайте отново.</string>
     <string name="retry_label">Опитай отново</string>
     <string name="no_results">Няма резултати</string>
     <string name="continue_label">Продължи</string>
@@ -27,4 +27,8 @@
     <string name="amount_label">Сума</string>
     <string name="submit_label">Изпрати</string>
     <string name="invalid_batch_no">Невалиден номер на партида</string>
+    <string name="invalid_number">Въведете валидно число.</string>
+    <string name="must_be_positive">Числото трябва да е по-голямо от нула.</string>
+    <string name="value_required">Изисква се стойност.</string>
+    <string name="incomplete_message">Моля, попълнете задължителните полета.</string>
 </resources>

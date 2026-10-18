@@ -82,7 +82,7 @@ fun IngredientTableHeader(
 fun IngredientTableSection(
     name: String,
     totalQuantity: Float,
-    requriedQuantity: Float,
+    requiredQuantity: Float,
     uom: String,
     modifier: Modifier = Modifier
 ) {
@@ -93,7 +93,7 @@ fun IngredientTableSection(
             .background(MaterialTheme.colorScheme.surfaceBright)
     ) {
         Text(text = name, modifier = Modifier.weight(1f))
-        Text(text = "%.1f / %.1f %s".format(totalQuantity, requriedQuantity, uom))
+        Text(text = "%.1f / %.1f %s".format(totalQuantity, requiredQuantity, uom))
     }
 }
 
@@ -166,7 +166,7 @@ fun IngredientTableRow(
 
 @Composable
 fun IngredientTable(
-    items: List<BomDetailsItem>,
+    ingredients: List<BomDetailsItem>,
     batches: Map<String, Map<String, Float>>,
     modifier: Modifier = Modifier,
 ) {
@@ -178,11 +178,17 @@ fun IngredientTable(
     Column(modifier = modifier.border(params.borderThickness, params.borderColor)) {
         IngredientTableHeader(params)
         LazyColumn(modifier = Modifier.fillMaxWidth()) {
-            items.forEach { item ->
-                val entries = batches[item.itemCode] ?: emptyMap()
-                val totalAmount = entries.values.sum()
-                stickyHeader(item.itemCode) {
-                    IngredientTableSection(item.itemName, totalAmount, item.quantity, item.uom)
+            ingredients.forEach { ingredient ->
+                val entries = batches[ingredient.itemCode] ?: emptyMap()
+                val totalQuantity = entries.values.sum()
+
+                stickyHeader(ingredient.itemCode) {
+                    IngredientTableSection(
+                        name = ingredient.itemName,
+                        totalQuantity = totalQuantity,
+                        requiredQuantity = ingredient.quantity,
+                        uom = ingredient.uom
+                    )
                 }
 
                 if (entries.isEmpty()) {
@@ -206,9 +212,9 @@ fun IngredientTable(
                     IngredientTableRow(
                         batch = BatchInfo(
                             batchNumber,
-                            itemCode = item.itemCode,
+                            itemCode = ingredient.itemCode,
                             quantity,
-                            uom = item.uom,
+                            uom = ingredient.uom,
                         ),
                         params = params,
                     )
