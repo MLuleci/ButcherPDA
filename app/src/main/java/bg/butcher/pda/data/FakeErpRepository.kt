@@ -90,7 +90,8 @@ class FakeErpRepository(
             BatchDetails(
                 name = batchNumber,
                 item = fakeItemId(),
-                itemName = fakeWord()
+                itemName = fakeWord(),
+                uom = "Kgs",
             )
         }
     }

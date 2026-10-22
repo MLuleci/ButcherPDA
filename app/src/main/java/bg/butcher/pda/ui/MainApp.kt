@@ -125,7 +125,7 @@ fun MainApp(
                 LaunchedEffect(viewModel, navController) {
                     viewModel.effects.collect { effect ->
                         when (effect) {
-                            FormUiEffect.ContinueToForm -> {
+                            FormUiEffect.GotoNextPage -> {
                                 navController.navigate(MainScreen.Form.name)
                             }
                             is FormUiEffect.ShowToast -> {
@@ -156,6 +156,7 @@ fun MainApp(
                 FormScreen(
                     state = state,
                     onExpiryChanged = viewModel::setDaysUntilExpiry,
+                    onFinishedChanged = viewModel::setIsFinished,
                     onSubmit = {},
                     modifier = Modifier.fillMaxSize()
                 )

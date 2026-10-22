@@ -53,6 +53,7 @@ import bg.butcher.pda.ui.components.ErrorMessage
 import bg.butcher.pda.ui.components.QuantityInput
 import bg.butcher.pda.ui.components.RowWithLabel
 import bg.butcher.pda.ui.components.SearchField
+import bg.butcher.pda.ui.components.SubmitButton
 import bg.butcher.pda.ui.theme.AppTheme
 import kotlinx.coroutines.launch
 
@@ -60,7 +61,7 @@ import kotlinx.coroutines.launch
 fun BomSearch(
     onQueryChanged: (String) -> Unit,
     onSelect: (BomSearchResultItem?) -> Unit,
-    searchState: NetworkState<List<BomSearchResultItem>>,
+    searchState: NetworkState<List<BomSearchResultItem>, String?>,
     modifier: Modifier = Modifier,
 ) {
     val state = rememberTextFieldState()
@@ -176,7 +177,7 @@ fun BomSelect(
     onQueryChanged: (String) -> Unit,
     onItemSelected: (BomSearchResultItem) -> Unit,
     selectedItem: BomSearchResultItem?,
-    searchState: NetworkState<List<BomSearchResultItem>>,
+    searchState: NetworkState<List<BomSearchResultItem>, String?>,
     modifier: Modifier = Modifier,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -251,24 +252,13 @@ fun StartScreen(
                 )
             }
         )
-
-        val isLoading = state.fetchState is NetworkState.Loading
-        Button(
-            enabled = !isLoading && state.canContinue,
+        SubmitButton(
+            label = stringResource(R.string.continue_label),
             onClick = onContinue,
-            modifier = Modifier
-                .align(Alignment.CenterHorizontally)
-                .fillMaxWidth(.9f)
-        ) {
-            if (isLoading) {
-                CircularProgressIndicator(
-                    strokeWidth = 3.dp,
-                    modifier = Modifier.size(20.dp)
-                )
-            } else {
-                Text(stringResource(R.string.continue_label))
-            }
-        }
+            enabled = state.canContinue,
+            isLoading = state.fetchState is NetworkState.Loading,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
     }
 }
 

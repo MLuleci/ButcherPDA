@@ -56,6 +56,7 @@ fun ExpiryInput(
             value = value,
             onValueChange = onValueChange,
             label = { Text(stringResource(R.string.expiry_label)) },
+            singleLine = true,
             keyboardOptions = KeyboardOptions(
                 autoCorrectEnabled = false,
                 keyboardType = KeyboardType.Decimal,

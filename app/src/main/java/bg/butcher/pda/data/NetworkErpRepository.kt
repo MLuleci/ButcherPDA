@@ -35,7 +35,7 @@ class NetworkErpRepository(
         service.getBatch(
             batchNumber,
             mapOf(
-                "fields" to "[\"name\",\"item\",\"item_name\"]"
+                "fields" to "[\"name\",\"item\",\"item_name\",\"uom\"]"
             )
         )
     }

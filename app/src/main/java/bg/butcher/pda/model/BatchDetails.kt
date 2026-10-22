@@ -9,4 +9,5 @@ data class BatchDetails(
     val item: String,
     @SerialName("item_name")
     val itemName: String,
+    val uom: String,
 )

@@ -45,7 +45,7 @@ data class TableParameters(
 data class BatchInfo(
     val batchNumber: String = "",
     val itemCode: String = "",
-    val quantity: Float = 0f,
+    val quantity: String = "",
     val uom: String = "",
 )
 
@@ -100,6 +100,7 @@ fun IngredientTableSection(
 @Composable
 fun IngredientTableRow(
     batch: BatchInfo,
+    // TODO: Pass on callbacks to dialog
     params: TableParameters,
     modifier: Modifier = Modifier
 ) {
@@ -211,9 +212,9 @@ fun IngredientTable(
                     HorizontalDivider(thickness = params.borderThickness, color = params.borderColor)
                     IngredientTableRow(
                         batch = BatchInfo(
-                            batchNumber,
+                            batchNumber = batchNumber,
                             itemCode = ingredient.itemCode,
-                            quantity,
+                            quantity = quantity.toString(),
                             uom = ingredient.uom,
                         ),
                         params = params,

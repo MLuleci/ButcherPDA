@@ -39,6 +39,7 @@ fun QuantityInput(
         value = value,
         onValueChange = onValueChange,
         label = { Text(stringResource(R.string.quantity_label)) },
+        singleLine = true,
         keyboardOptions = KeyboardOptions(
             autoCorrectEnabled = false,
             keyboardType = KeyboardType.Decimal,

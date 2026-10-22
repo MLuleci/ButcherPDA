@@ -13,8 +13,10 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import bg.butcher.pda.MainApplication
 import bg.butcher.pda.R
 import bg.butcher.pda.data.ErpRepository
+import bg.butcher.pda.model.BatchDetails
 import bg.butcher.pda.model.BomDetails
 import bg.butcher.pda.model.BomSearchResultItem
+import bg.butcher.pda.model.ManufactureEntry
 import bg.butcher.pda.network.JobSlot
 import bg.butcher.pda.network.NetworkState
 import kotlinx.coroutines.channels.Channel
@@ -22,11 +24,19 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
 import kotlin.time.Duration.Companion.milliseconds
 
 sealed interface FormUiEffect {
     data class ShowToast(@StringRes val messageResId: Int): FormUiEffect
-    data object ContinueToForm: FormUiEffect
+    data object GotoNextPage: FormUiEffect
+}
+
+enum class FetchBatchError {
+    NETWORK_ERROR,
+    REQUEST_FAILED,
+    INVALID_INPUT,
+    NOT_FOUND,
 }
 
 data class FormUiState(
@@ -35,14 +45,15 @@ data class FormUiState(
     val explode: Boolean = false,
     val selectedItem: BomSearchResultItem? = null,
     val searchQuery: String = "",
-    val searchState: NetworkState<List<BomSearchResultItem>> = NetworkState.Idle,
+    val searchState: NetworkState<List<BomSearchResultItem>, String?> = NetworkState.Idle,
 
     // Assembly page:
     // `fetchState` is cleared when `selectedItem`, `quantityText`, or `explode` are changed
-    val fetchState: NetworkState<BomDetails> = NetworkState.Idle,
+    val fetchState: NetworkState<BomDetails, String?> = NetworkState.Idle,
     val items: Map<String, Map<String, Float>> = mapOf(),
     val expiryDaysText: String = "",
     val isFinished: Boolean = true,
+    val submitState: NetworkState<ManufactureEntry, String?> = NetworkState.Idle,
 ) {
     val quantity: Float?
         get() = quantityText.toFloatOrNull()?.takeIf { it.isFinite() && it > 0f }
@@ -101,7 +112,7 @@ class FormViewModel(private val erpRepository: ErpRepository, private val state:
                                 )
                             )
                         }
-                        _effects.send(FormUiEffect.ContinueToForm)
+                        _effects.send(FormUiEffect.GotoNextPage)
                     }
                     .onFailure { e ->
                         Log.e("AssemblyViewModel", "fetchBomDetails", e)
@@ -110,6 +121,27 @@ class FormViewModel(private val erpRepository: ErpRepository, private val state:
                     }
             }
         }
+    }
+
+    suspend fun fetchBatchDetails(batchNumber: String): NetworkState<BatchDetails, FetchBatchError> {
+        val batchNumber = batchNumber.trim()
+        if (batchNumber.isEmpty()) {
+            return NetworkState.Error(FetchBatchError.INVALID_INPUT)
+        }
+
+        val result = erpRepository.getBatch(batchNumber)
+        return result.fold(
+            onSuccess = { item -> NetworkState.Success(item) },
+            onFailure = { error ->
+                when (error) {
+                    is HttpException -> when (error.code()) {
+                        404 -> NetworkState.Error(FetchBatchError.NOT_FOUND)
+                        else -> NetworkState.Error(FetchBatchError.REQUEST_FAILED)
+                    }
+                    else -> NetworkState.Error(FetchBatchError.NETWORK_ERROR)
+                }
+            }
+        )
     }
 
     fun setSelectedBom(bom: BomSearchResultItem) {
