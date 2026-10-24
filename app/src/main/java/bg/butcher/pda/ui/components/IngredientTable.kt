@@ -229,7 +229,7 @@ fun IngredientTableRow(
             )
             VerticalDivider(thickness = params.borderThickness, color = params.borderColor)
             Text(
-                text = "${formatDecimal(batch.quantity)} ${batch.uom}",
+                text = stringResource(R.string.quantity_with_unit, formatDecimal(batch.quantity), batch.uom),
                 modifier = Modifier
                     .weight(1f)
                     .padding(params.cellPadding)

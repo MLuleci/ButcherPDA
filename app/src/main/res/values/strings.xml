@@ -55,4 +55,14 @@
     <string name="edit_label">Edit</string>
     <string name="delete_label">Delete</string>
     <string name="finished_summary">Finished</string>
+    <string name="bom_line">BOM: %1$s</string>
+    <string name="quantity_with_unit">%1$s %2$s</string>
+    <string name="clear_label">Clear</string>
+    <string name="valid_label">Valid</string>
+    <string name="batch_not_in_recipe">Batch %1$s is %2$s, which is not in this recipe.</string>
+    <string name="batch_already_added">This batch has already been added.</string>
+    <string name="not_a_batch_label">This code is not a batch label.</string>
+    <string name="scan_ignored_while_editing">Scan ignored. Close the edit to add a new batch.</string>
+    <string name="printer_not_ready">Printer not ready. Check the paper.</string>
+    <string name="submit_unknown">Couldn\'t confirm the submission. Retry to check.</string>
 </resources>

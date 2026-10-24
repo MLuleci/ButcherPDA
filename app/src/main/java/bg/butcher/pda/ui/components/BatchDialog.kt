@@ -131,7 +131,7 @@ fun BatchDialog(
                         if (isLoading) {
                             CircularProgressIndicator()
                         } else if (isBatchValid) {
-                            Icon(imageVector = Icons.Default.Check, contentDescription = "Valid")
+                            Icon(imageVector = Icons.Default.Check, contentDescription = stringResource(R.string.valid_label))
                         }
                     }
                 )

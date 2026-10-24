@@ -36,7 +36,7 @@ fun ErrorMessage(
             TextButton(onClick = onRetry) {
                 Icon(
                     imageVector = Icons.Default.Refresh,
-                    contentDescription = "Retry",
+                    contentDescription = null,
                     modifier = Modifier.size(15.dp),
                 )
                 Text(

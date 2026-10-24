@@ -34,11 +34,11 @@ fun SearchField(
         state = state,
         lineLimits = TextFieldLineLimits.SingleLine,
         placeholder = { Text(stringResource(R.string.search_label)) },
-        leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+        leadingIcon = { Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search_label)) },
         trailingIcon = {
             if (state.text.isNotEmpty()) {
                 IconButton(onClick = { state.clearText() }) {
-                    Icon(Icons.Default.Clear, contentDescription = "Clear")
+                    Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.clear_label))
                 }
             }
         },

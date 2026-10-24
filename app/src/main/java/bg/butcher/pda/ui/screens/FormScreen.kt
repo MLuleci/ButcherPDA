@@ -52,7 +52,7 @@ fun FormUiState.ingredientLines(bom: BomDetails): List<IngredientLine> = bom.ite
 @Composable
 private fun RunSummary(state: FormUiState, bom: BomDetails) {
     val settings = listOfNotNull(
-        "${formatDecimal(bom.quantity)} ${bom.uom}",
+        stringResource(R.string.quantity_with_unit, formatDecimal(bom.quantity), bom.uom),
         state.expiryDays?.let { stringResource(R.string.expires_in_days, it) },
         stringResource(if (state.isFinished) R.string.finished_summary else R.string.not_finished_label),
         if (state.explode) stringResource(R.string.explode_label) else null,
@@ -60,7 +60,7 @@ private fun RunSummary(state: FormUiState, bom: BomDetails) {
     Column {
         Text(text = bom.itemName, style = MaterialTheme.typography.titleMedium)
         Text(
-            text = "${stringResource(R.string.bom_label)}: ${bom.name}",
+            text = stringResource(R.string.bom_line, bom.name),
             style = MaterialTheme.typography.labelSmall,
         )
         Text(text = settings.joinToString(" · "), style = MaterialTheme.typography.bodyMedium)
