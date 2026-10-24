@@ -155,11 +155,15 @@ fun MainApp(
                 composable(route = MainScreen.Form.name) {
                     val viewModel = it.formViewModel(navController)
                     val state by viewModel.uiState.collectAsState()
+                    LaunchedEffect(viewModel) {
+                        if (state.canContinue) viewModel.reloadBomDetails() else navController.popBackStack()
+                    }
                     FormScreen(
                         state = state,
                         onExpiryChanged = viewModel::setDaysUntilExpiry,
                         onFinishedChanged = viewModel::setIsFinished,
                         onSubmit = {},
+                        onRetry = viewModel::reloadBomDetails,
                         modifier = Modifier.fillMaxSize()
                     )
                 }

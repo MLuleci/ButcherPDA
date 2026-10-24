@@ -38,13 +38,15 @@ fun FormScreen(
     onExpiryChanged: (String) -> Unit,
     onFinishedChanged: (Boolean) -> Unit,
     onSubmit: () -> Unit,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showDialog by rememberSaveable { mutableStateOf(false) }
     Box(modifier = modifier) {
         when (state.fetchState) {
-            is NetworkState.Error -> Centered { ErrorMessage(error = state.fetchState.error) }
-            is NetworkState.Loading -> Centered { CircularProgressIndicator() }
+            is NetworkState.Error -> Centered { ErrorMessage(error = state.fetchState.error, onRetry = onRetry) }
+            // Idle only after process death, until the reload starts
+            is NetworkState.Idle, is NetworkState.Loading -> Centered { CircularProgressIndicator() }
             is NetworkState.Success -> {
                 val bom = state.fetchState.data
                 Column(
@@ -89,7 +91,6 @@ fun FormScreen(
                     )
                 }
             }
-            else -> {}
         }
     }
 }
