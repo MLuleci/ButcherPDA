@@ -56,6 +56,7 @@ object FakeDataSource {
     val batchDetails = BatchDetails(
         name = "batch1",
         item = materialItem,
-        itemName = materialItemName
+        itemName = materialItemName,
+        uom = "Kgs",
     )
 }
