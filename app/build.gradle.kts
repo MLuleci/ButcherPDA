@@ -62,6 +62,9 @@ dependencies {
     implementation(libs.material)
     implementation(libs.kotlinx.datetime)
 
+    // Vendor scanner/printer SDK; bundles zxing 3.5.1, so don't add zxing separately
+    implementation(files("libs/qspdasdk.jar"))
+
     // Retrofit
     implementation(libs.retrofit)
     implementation(libs.retrofit2.kotlinx.serialization.converter)

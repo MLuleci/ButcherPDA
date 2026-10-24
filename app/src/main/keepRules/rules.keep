@@ -10,3 +10,16 @@
 #-keepclassmembers class fqcn.of.javascript.interface.for.webview {
 #   public *;
 #}
+
+# Vendor PDA SDK (qspdasdk.jar): JNI binds by name to android.zyapi.CommonApi
+-keep class android.zyapi.CommonApi {
+    native <methods>;
+    <init>();
+}
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
+# PrintUtils keeps its state in static fields used by anonymous Handler/Runnable classes
+-keep class com.qs.wiget.** { *; }
+-dontwarn com.google.zxing.**
+-dontwarn com.qs5501demo.aidl.**
