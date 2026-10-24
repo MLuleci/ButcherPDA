@@ -21,13 +21,19 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Set useFakeErp=true in gradle.properties to run without a server, e.g. on the emulator
+            buildConfigField("boolean", "USE_FAKE_ERP", providers.gradleProperty("useFakeErp").getOrElse("false"))
+        }
         release {
+            buildConfigField("boolean", "USE_FAKE_ERP", "false")
             optimization {
                 enable = false
             }
         }
     }
     buildFeatures {
+        buildConfig = true
         compose = true
     }
     compileOptions {

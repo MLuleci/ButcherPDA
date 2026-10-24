@@ -2,6 +2,7 @@ package bg.butcher.pda.data
 
 import android.content.Context
 import androidx.annotation.RawRes
+import bg.butcher.pda.BuildConfig
 import bg.butcher.pda.R
 import bg.butcher.pda.network.ErpService
 import bg.butcher.pda.network.ErpServiceInterceptor
@@ -32,21 +33,25 @@ private fun Context.readCertificate(@RawRes id: Int): X509Certificate =
 class DefaultAppContainer(context: Context): AppContainer {
     override val settingsRepository = SettingsRepository(context.settingsDataStore)
 
-    private val certificates = HandshakeCertificates.Builder()
-        .addPlatformTrustedCertificates()
-        .apply { LETS_ENCRYPT_ROOTS.forEach { addTrustedCertificate(context.readCertificate(it)) } }
-        .build()
+    private val certificates by lazy {
+        HandshakeCertificates.Builder()
+            .addPlatformTrustedCertificates()
+            .apply { LETS_ENCRYPT_ROOTS.forEach { addTrustedCertificate(context.readCertificate(it)) } }
+            .build()
+    }
 
-    private val okHttp = OkHttpClient.Builder()
-        .sslSocketFactory(certificates.sslSocketFactory(), certificates.trustManager)
-        .addInterceptor(ErpServiceInterceptor(settingsRepository.settings))
-        .build()
+    private val okHttp by lazy {
+        OkHttpClient.Builder()
+            .sslSocketFactory(certificates.sslSocketFactory(), certificates.trustManager)
+            .addInterceptor(ErpServiceInterceptor(settingsRepository.settings))
+            .build()
+    }
 
     private val service: ErpService by lazy {
         createErpService("http://localhost/", okHttp) // Base URL replaced by interceptor
     }
 
     override val erpRepository: ErpRepository by lazy {
-        FakeErpRepository(1.seconds)
+        if (BuildConfig.USE_FAKE_ERP) FakeErpRepository(latency = 1.seconds) else NetworkErpRepository(service)
     }
 }
