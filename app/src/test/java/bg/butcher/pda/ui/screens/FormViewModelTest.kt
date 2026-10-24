@@ -1,8 +1,14 @@
 package bg.butcher.pda.ui.screens
 
 import androidx.lifecycle.SavedStateHandle
+import bg.butcher.pda.R
+import bg.butcher.pda.data.ErpRepository
 import bg.butcher.pda.data.FakeErpRepository
+import bg.butcher.pda.hardware.FakeLabelPrinter
+import bg.butcher.pda.hardware.LabelPrinter
 import bg.butcher.pda.model.BomSearchResultItem
+import bg.butcher.pda.model.ManufactureEntry
+import bg.butcher.pda.network.ErpError
 import bg.butcher.pda.network.NetworkState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -12,6 +18,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.LocalDate
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -52,7 +59,30 @@ class FormViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel(saved: SavedStateHandle = SavedStateHandle()) = FormViewModel(FakeErpRepository(), saved)
+    private fun viewModel(
+        saved: SavedStateHandle = SavedStateHandle(),
+        repository: ErpRepository = FakeErpRepository(),
+        printer: LabelPrinter = FakeLabelPrinter(),
+    ) = FormViewModel(repository, saved, printer)
+
+    private fun failingSubmit(error: ErpError) = object : ErpRepository by FakeErpRepository() {
+        override suspend fun createManufactureEntry(
+            bom: String,
+            quantity: Double,
+            items: Map<String, Map<String, Double>>,
+            expiryDate: LocalDate,
+            explode: Boolean,
+            isFinished: Boolean,
+            requestId: String,
+        ): Result<ManufactureEntry> = Result.failure(error)
+    }
+
+    // 25 meatballs: 1 kg beef, 0.2 kg spice and 3 onions
+    private fun FormViewModel.readyToSubmit(): FormViewModel = loaded().apply {
+        addBatch("BEEF", "BEEF.0001", 1.0)
+        addBatch("SPICE", "SPICE.0001", 0.2)
+        addBatch("ONION", "ONION.0001", 3.0)
+    }
 
     private fun FormViewModel.loaded(): FormViewModel {
         setSelectedBom(meatballs)
@@ -189,7 +219,7 @@ class FormViewModelTest {
 
         assertTrue(vm.uiState.value.fetchState is NetworkState.Success)
         assertEquals("ONION", vm.uiState.value.unworkableIngredients.single().itemCode)
-        assertTrue(effects.none { it is FormUiEffect.GotoNextPage })
+        assertTrue(effects.none { it is FormUiEffect.GotoForm })
     }
 
     @Test
@@ -320,5 +350,72 @@ class FormViewModelTest {
         assertNull(vm.updateBatch("BEEF", "BEEF.0001", 0.8))
 
         assertEquals(mapOf("BEEF" to mapOf("BEEF.0001" to 0.8)), vm.uiState.value.items)
+    }
+
+    @Test
+    fun submit_savesEntryAndOpensSummary() = runTest(dispatcher) {
+        val saved = SavedStateHandle()
+        val vm = viewModel(saved).readyToSubmit()
+        val effects = mutableListOf<FormUiEffect>()
+        backgroundScope.launch(dispatcher) { vm.effects.collect { effects += it } }
+        assertTrue(vm.uiState.value.canSubmit)
+
+        vm.submit()
+        advanceUntilIdle()
+
+        val entry = (vm.uiState.value.submitState as NetworkState.Success).data
+        assertEquals("BEEF_MEATBALLS", entry.itemCode)
+        assertFalse(vm.uiState.value.canSubmit)
+        assertTrue(FormUiEffect.GotoSummary in effects)
+        assertEquals(entry, (viewModel(saved).uiState.value.submitState as NetworkState.Success).data)
+    }
+
+    @Test
+    fun submit_failureKeepsRequestIdForRetry() = runTest(dispatcher) {
+        val vm = viewModel(repository = failingSubmit(ErpError.Http(500, null))).readyToSubmit()
+        val requestId = vm.uiState.value.requestId
+
+        vm.submit()
+        advanceUntilIdle()
+
+        val error = (vm.uiState.value.submitState as NetworkState.Error).error
+        assertTrue(error.isOutcomeUnknown)
+        assertEquals(requestId, vm.uiState.value.requestId)
+        assertTrue(vm.uiState.value.canSubmit)
+    }
+
+    @Test
+    fun startAgain_keepsSettingsAndClearsBatches() = runTest(dispatcher) {
+        val vm = viewModel().readyToSubmit()
+        vm.setDaysUntilExpiry("3")
+        vm.submit()
+        advanceUntilIdle()
+        val requestId = vm.uiState.value.requestId
+
+        vm.startAgain()
+
+        val state = vm.uiState.value
+        assertTrue(state.items.isEmpty())
+        assertTrue(state.submitState is NetworkState.Idle)
+        assertNotEquals(requestId, state.requestId)
+        assertEquals(meatballs, state.selectedItem)
+        assertEquals("25", state.quantityText)
+        assertEquals("3", state.expiryDaysText)
+        assertTrue(state.fetchState is NetworkState.Success)
+    }
+
+    @Test
+    fun printLabel_failureShowsToast() = runTest(dispatcher) {
+        val vm = viewModel(printer = { Result.failure(IllegalStateException("No paper")) }).readyToSubmit()
+        val effects = mutableListOf<FormUiEffect>()
+        backgroundScope.launch(dispatcher) { vm.effects.collect { effects += it } }
+        vm.submit()
+        advanceUntilIdle()
+
+        vm.printLabel()
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.printState is NetworkState.Error)
+        assertTrue(FormUiEffect.ShowToast(R.string.printer_not_ready) in effects)
     }
 }

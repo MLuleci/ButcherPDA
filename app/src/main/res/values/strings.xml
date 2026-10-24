@@ -68,4 +68,10 @@
     <string name="edit_batch_label">Edit batch</string>
     <string name="add_label">Add</string>
     <string name="batch_ingredient">Ingredient: %1$s</string>
+    <string name="production_date_label">Produced</string>
+    <string name="expiry_date_label">Expires</string>
+    <string name="stock_entry_label">Stock entry</string>
+    <string name="print_label">Print label</string>
+    <string name="same_bom_again_label">Same BOM again</string>
+    <string name="done_label">Done</string>
 </resources>

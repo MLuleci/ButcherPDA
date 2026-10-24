@@ -1,6 +1,8 @@
 package bg.butcher.pda.ui
 
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -15,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -36,6 +39,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import bg.butcher.pda.R
+import bg.butcher.pda.network.NetworkState
 import bg.butcher.pda.ui.components.BatchDialogState
 import bg.butcher.pda.ui.components.BatchDialogStateSaver
 import bg.butcher.pda.ui.screens.FormScreen
@@ -44,6 +48,7 @@ import bg.butcher.pda.ui.screens.FormUiEffect
 import bg.butcher.pda.ui.screens.HomeScreen
 import bg.butcher.pda.ui.screens.StartScreen
 import bg.butcher.pda.ui.screens.SettingsScreen
+import bg.butcher.pda.ui.screens.SummaryScreen
 import bg.butcher.pda.ui.screens.canFetch
 
 // Nested graph for the manufacturing flow; its screens share one FormViewModel
@@ -69,7 +74,8 @@ fun MainAppBar(
     currentScreen: MainScreen,
     canNavigateBack: Boolean,
     navigateUp: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    navigateUpEnabled: Boolean = true,
 ) {
     TopAppBar(
         title = { Text(stringResource(currentScreen.title)) },
@@ -79,7 +85,7 @@ fun MainAppBar(
         modifier = modifier,
         navigationIcon = {
             if (canNavigateBack) {
-                IconButton(onClick = navigateUp) {
+                IconButton(onClick = navigateUp, enabled = navigateUpEnabled) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = stringResource(R.string.back_label)
@@ -95,15 +101,20 @@ fun MainApp(
     navController: NavHostController = rememberNavController()
 ) {
     val backStackEntry by navController.currentBackStackEntryAsState()
+    val backDispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
     val currentScreen = MainScreen.entries.firstOrNull { it.name == backStackEntry?.destination?.route }
         ?: MainScreen.Home
+    // Set by a route that mustn't be left yet, e.g. Form while submitting
+    var backBlocked by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             MainAppBar(
                 currentScreen = currentScreen,
                 canNavigateBack = navController.previousBackStackEntry != null,
-                navigateUp = { navController.navigateUp() }
+                navigateUpEnabled = !backBlocked,
+                // Through the dispatcher, so the routes' BackHandlers apply to it too
+                navigateUp = { backDispatcher?.onBackPressed() ?: navController.navigateUp() }
             )
         }
     ) { innerPadding ->
@@ -128,26 +139,7 @@ fun MainApp(
                 composable(route = MainScreen.Start.name) {
                     val viewModel = it.formViewModel(navController)
                     val state by viewModel.uiState.collectAsState()
-                    val context = LocalContext.current
-                    val resources = LocalResources.current
-
-                    LaunchedEffect(viewModel, navController) {
-                        viewModel.effects.collect { effect ->
-                            when (effect) {
-                                FormUiEffect.GotoNextPage -> {
-                                    navController.navigate(MainScreen.Form.name) { launchSingleTop = true }
-                                }
-                                is FormUiEffect.ShowToast -> {
-                                    Toast.makeText(
-                                        context,
-                                        resources.getString(effect.messageResId),
-                                        Toast.LENGTH_SHORT,
-                                    ).show()
-                                }
-                            }
-                        }
-                    }
-
+                    CollectFormEffects(viewModel, navController)
                     StartScreen(
                         state = state,
                         onQuantityChanged = viewModel::setQuantity,
@@ -163,8 +155,18 @@ fun MainApp(
                 composable(route = MainScreen.Form.name) {
                     val viewModel = it.formViewModel(navController)
                     val state by viewModel.uiState.collectAsState()
+                    CollectFormEffects(viewModel, navController)
                     LaunchedEffect(viewModel) {
                         if (state.canFetch) viewModel.reloadBomDetails() else navController.popBackStack()
+                    }
+                    // Stay on Form until the submit finishes: after Back, the operator could change the run
+                    // on Start and the late result would open Summary for it, or leave the graph and never
+                    // see an entry the server did create
+                    val submitting = state.submitState is NetworkState.Loading
+                    BackHandler(enabled = submitting) {}
+                    DisposableEffect(submitting) {
+                        backBlocked = submitting
+                        onDispose { backBlocked = false }
                     }
                     var dialog by rememberSaveable(stateSaver = BatchDialogStateSaver) {
                         mutableStateOf<BatchDialogState?>(null)
@@ -177,10 +179,57 @@ fun MainApp(
                         onAddBatch = viewModel::addBatch,
                         onUpdateBatch = viewModel::updateBatch,
                         onRemoveBatch = { itemCode, batchNumber -> viewModel.removeBatch(itemCode, batchNumber) },
-                        onSubmit = {},
+                        onSubmit = viewModel::submit,
                         onRetry = viewModel::reloadBomDetails,
                         modifier = Modifier.fillMaxSize()
                     )
+                }
+                composable(route = MainScreen.Summary.name) {
+                    val viewModel = it.formViewModel(navController)
+                    val state by viewModel.uiState.collectAsState()
+                    CollectFormEffects(viewModel, navController)
+                    val done = { navController.popBackStack(MANUFACTURE_GRAPH, inclusive = true) }
+                    BackHandler { done() }
+                    // Kept while the page animates out after "Same BOM again" clears it
+                    val entry = remember { (state.submitState as? NetworkState.Success)?.data }
+                    if (entry != null) {
+                        SummaryScreen(
+                            entry = entry,
+                            printState = state.printState,
+                            onPrint = viewModel::printLabel,
+                            onSameBomAgain = {
+                                viewModel.startAgain()
+                                navController.popBackStack(MainScreen.Start.name, inclusive = false)
+                            },
+                            onDone = { done() },
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CollectFormEffects(viewModel: FormViewModel, navController: NavController) {
+    val context = LocalContext.current
+    val resources = LocalResources.current
+    LaunchedEffect(viewModel, navController) {
+        viewModel.effects.collect { effect ->
+            when (effect) {
+                FormUiEffect.GotoForm -> {
+                    navController.navigate(MainScreen.Form.name) { launchSingleTop = true }
+                }
+                // Replaces Form, so Back can't reach the submitted form
+                FormUiEffect.GotoSummary -> {
+                    navController.navigate(MainScreen.Summary.name) {
+                        popUpTo(MainScreen.Form.name) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+                is FormUiEffect.ShowToast -> {
+                    Toast.makeText(context, resources.getString(effect.messageResId), Toast.LENGTH_SHORT).show()
                 }
             }
         }

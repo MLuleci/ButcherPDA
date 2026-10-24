@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import bg.butcher.pda.R
 import bg.butcher.pda.model.BomDetails
 import bg.butcher.pda.model.BomDetailsItem
+import bg.butcher.pda.network.ErpError
 import bg.butcher.pda.network.NetworkState
 import bg.butcher.pda.ui.components.BatchDialog
 import bg.butcher.pda.ui.components.BatchDialogState
@@ -32,8 +33,10 @@ import bg.butcher.pda.ui.components.ErrorMessage
 import bg.butcher.pda.ui.components.IngredientLine
 import bg.butcher.pda.ui.components.IngredientTable
 import bg.butcher.pda.ui.components.SubmitButton
+import bg.butcher.pda.ui.components.errorText
 import bg.butcher.pda.ui.theme.AppTheme
 import bg.butcher.pda.util.formatDecimal
+import java.io.IOException
 
 fun FormUiState.ingredientLines(bom: BomDetails): List<IngredientLine> = bom.items.map {
     IngredientLine(
@@ -113,8 +116,18 @@ fun FormScreen(
                             modifier = Modifier.padding(start = 8.dp)
                         )
                     }
+                    val submitError = (state.submitState as? NetworkState.Error)?.error
+                    submitError?.let { error ->
+                        Text(
+                            text = if (error.isOutcomeUnknown) stringResource(R.string.submit_unknown) else errorText(error),
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                        )
+                    }
                     SubmitButton(
-                        label = stringResource(R.string.submit_label),
+                        label = stringResource(
+                            if (submitError?.isOutcomeUnknown == true) R.string.retry_label else R.string.submit_label
+                        ),
                         onClick = onSubmit,
                         enabled = state.canSubmit,
                         isLoading = state.submitState is NetworkState.Loading,
@@ -149,36 +162,28 @@ private fun previewItem(code: String, name: String, quantity: Double, wholeNumbe
     wholeNumber = wholeNumber,
 )
 
-@Preview(showBackground = true)
+private val previewBom = BomDetails(
+    name = "BOM-BEEF_MEATBALLS-001",
+    quantity = 100.0,
+    itemCode = "BEEF_MEATBALLS",
+    itemName = "Meatballs (Beef)",
+    uom = "Nos",
+    stockUom = "Nos",
+    shelfLife = 7,
+    items = listOf(
+        previewItem("BEEF", "Beef", 4.0),
+        previewItem("SPICE", "Spice", 0.8),
+        previewItem("ONION", "Onion", 12.0, wholeNumber = true),
+        previewItem("CASING", "Casing", 2.5, wholeNumber = true),
+    ),
+    wholeNumber = true,
+)
+
 @Composable
-fun FormScreen_Preview() {
-    val bom = BomDetails(
-        name = "BOM-BEEF_MEATBALLS-001",
-        quantity = 100.0,
-        itemCode = "BEEF_MEATBALLS",
-        itemName = "Meatballs (Beef)",
-        uom = "Nos",
-        stockUom = "Nos",
-        shelfLife = 7,
-        items = listOf(
-            previewItem("BEEF", "Beef", 4.0),
-            previewItem("SPICE", "Spice", 0.8),
-            previewItem("ONION", "Onion", 12.0, wholeNumber = true),
-            previewItem("CASING", "Casing", 2.5, wholeNumber = true),
-        ),
-        wholeNumber = true,
-    )
+private fun FormScreenPreview(state: FormUiState) {
     AppTheme {
         FormScreen(
-            state = FormUiState(
-                fetchState = NetworkState.Success(bom),
-                expiryDaysText = "7",
-                items = mapOf(
-                    "BEEF" to mapOf("BEEF.0001" to 2.5, "BEEF.0002" to 1.4),
-                    "SPICE" to mapOf("SPICE.0001" to 0.5),
-                    "ONION" to mapOf("ONION.0001" to 14.0),
-                ),
-            ),
+            state = state,
             dialog = null,
             onDialogChange = {},
             lookupBatch = { NetworkState.Idle },
@@ -190,4 +195,44 @@ fun FormScreen_Preview() {
             modifier = Modifier.fillMaxSize(),
         )
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun FormScreen_Preview() {
+    FormScreenPreview(
+        FormUiState(
+            fetchState = NetworkState.Success(previewBom),
+            expiryDaysText = "7",
+            items = mapOf(
+                "BEEF" to mapOf("BEEF.0001" to 2.5, "BEEF.0002" to 1.4),
+                "SPICE" to mapOf("SPICE.0001" to 0.5),
+                "ONION" to mapOf("ONION.0001" to 14.0),
+            ),
+        )
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+fun FormScreen_SubmitUnknown_Preview() {
+    FormScreenPreview(
+        FormUiState(
+            fetchState = NetworkState.Success(previewBom),
+            expiryDaysText = "7",
+            items = mapOf(
+                "BEEF" to mapOf("BEEF.0001" to 4.0),
+                "SPICE" to mapOf("SPICE.0001" to 0.8),
+                "ONION" to mapOf("ONION.0001" to 12.0),
+                "CASING" to mapOf("CASING.0001" to 2.0),
+            ),
+            submitState = NetworkState.Error(ErpError.Http(500, null)),
+        )
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+fun FormScreen_FetchError_Preview() {
+    FormScreenPreview(FormUiState(fetchState = NetworkState.Error(ErpError.Network(IOException()))))
 }

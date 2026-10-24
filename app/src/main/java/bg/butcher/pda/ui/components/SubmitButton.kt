@@ -7,7 +7,9 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import bg.butcher.pda.ui.theme.AppTheme
 
 @Composable
 fun SubmitButton(
@@ -30,5 +32,21 @@ fun SubmitButton(
         } else {
             Text(label)
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun SubmitButton_Preview() {
+    AppTheme {
+        SubmitButton(label = "Submit", onClick = {})
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun SubmitButton_Loading_Preview() {
+    AppTheme {
+        SubmitButton(label = "Submit", onClick = {}, isLoading = true)
     }
 }

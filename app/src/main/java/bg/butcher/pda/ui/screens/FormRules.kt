@@ -75,4 +75,5 @@ val FormUiState.unworkableIngredients: List<BomDetailsItem>
 val FormUiState.canSubmit: Boolean
     get() = expiryDays != null &&
         bom?.items?.all { coverage(it) == Coverage.OK } == true &&
-        submitState !is NetworkState.Loading
+        submitState !is NetworkState.Loading &&
+        submitState !is NetworkState.Success

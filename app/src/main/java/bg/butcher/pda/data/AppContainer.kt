@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.annotation.RawRes
 import bg.butcher.pda.BuildConfig
 import bg.butcher.pda.R
+import bg.butcher.pda.hardware.FakeLabelPrinter
+import bg.butcher.pda.hardware.LabelPrinter
 import bg.butcher.pda.network.ErpService
 import bg.butcher.pda.network.ErpServiceInterceptor
 import bg.butcher.pda.network.createErpService
@@ -16,6 +18,7 @@ import kotlin.time.Duration.Companion.seconds
 interface AppContainer {
     val erpRepository: ErpRepository
     val settingsRepository: SettingsRepository
+    val labelPrinter: LabelPrinter
 }
 
 // Android 6 doesn't ship the Let's Encrypt roots (ISRG Root X1 arrived in 7.1.1),
@@ -54,4 +57,6 @@ class DefaultAppContainer(context: Context): AppContainer {
     override val erpRepository: ErpRepository by lazy {
         if (BuildConfig.USE_FAKE_ERP) FakeErpRepository(latency = 1.seconds) else NetworkErpRepository(service)
     }
+
+    override val labelPrinter: LabelPrinter = FakeLabelPrinter()
 }

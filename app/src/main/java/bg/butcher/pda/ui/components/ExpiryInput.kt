@@ -11,30 +11,14 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import bg.butcher.pda.R
 import bg.butcher.pda.ui.theme.AppTheme
-import kotlinx.datetime.DateTimeUnit
-import kotlinx.datetime.LocalDate
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.atStartOfDayIn
-import kotlinx.datetime.plus
-import kotlinx.datetime.todayIn
-import java.text.DateFormat
-import java.util.Date
-import kotlin.time.Clock
-
-/** A calendar day, so it doesn't drift around daylight-saving changes. */
-fun dateFromToday(days: Int): LocalDate =
-    Clock.System.todayIn(TimeZone.currentSystemDefault()).plus(days, DateTimeUnit.DAY)
+import bg.butcher.pda.util.dateFromToday
+import bg.butcher.pda.util.formatDate
 
 fun validateDays(text: String): Int? {
     if (text.isBlank()) return R.string.value_required
     val value = text.trim().toIntOrNull() ?: return R.string.whole_number_required
     if (value <= 0) return R.string.must_be_positive
     return null
-}
-
-private fun formatDate(date: LocalDate): String {
-    val millis = date.atStartOfDayIn(TimeZone.currentSystemDefault()).toEpochMilliseconds()
-    return DateFormat.getDateInstance(DateFormat.FULL).format(Date(millis))
 }
 
 @Composable

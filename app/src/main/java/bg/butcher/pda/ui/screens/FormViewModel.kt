@@ -13,6 +13,8 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import bg.butcher.pda.MainApplication
 import bg.butcher.pda.R
 import bg.butcher.pda.data.ErpRepository
+import bg.butcher.pda.hardware.LabelPrinter
+import bg.butcher.pda.hardware.toLabel
 import bg.butcher.pda.model.BatchDetails
 import bg.butcher.pda.model.BomDetails
 import bg.butcher.pda.model.BomDetailsItem
@@ -21,6 +23,7 @@ import bg.butcher.pda.model.ManufactureEntry
 import bg.butcher.pda.network.ErpError
 import bg.butcher.pda.network.JobSlot
 import bg.butcher.pda.network.NetworkState
+import bg.butcher.pda.util.dateFromToday
 import bg.butcher.pda.util.parseDecimal
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,6 +31,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.updateAndGet
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import java.util.UUID
 import kotlin.time.Duration.Companion.milliseconds
@@ -36,7 +40,8 @@ private const val TAG = "FormViewModel"
 
 sealed interface FormUiEffect {
     data class ShowToast(@StringRes val messageResId: Int): FormUiEffect
-    data object GotoNextPage: FormUiEffect
+    data object GotoForm: FormUiEffect
+    data object GotoSummary: FormUiEffect
 }
 
 sealed interface BatchLookupError {
@@ -100,9 +105,14 @@ private object Saved {
     const val FINISHED = "finished"
     const val ITEMS = "items"
     const val REQUEST_ID = "requestId"
+    const val ENTRY = "entry"
 }
 
-class FormViewModel(private val erpRepository: ErpRepository, private val saved: SavedStateHandle): ViewModel() {
+class FormViewModel(
+    private val erpRepository: ErpRepository,
+    private val saved: SavedStateHandle,
+    private val labelPrinter: LabelPrinter,
+): ViewModel() {
     private val _uiState = MutableStateFlow(restore())
     val uiState = _uiState.asStateFlow()
     private val bomSearchJob = JobSlot(viewModelScope)
@@ -121,13 +131,15 @@ class FormViewModel(private val erpRepository: ErpRepository, private val saved:
             isFinished = saved[Saved.FINISHED] ?: defaults.isFinished,
             items = saved.get<String>(Saved.ITEMS)?.let { decodeOrNull<BatchMap>(it) } ?: defaults.items,
             requestId = saved[Saved.REQUEST_ID] ?: defaults.requestId,
+            submitState = saved.get<String>(Saved.ENTRY)?.let { decodeOrNull<ManufactureEntry>(it) }
+                ?.let { NetworkState.Success(it) } ?: defaults.submitState,
         )
     }
 
     private inline fun <reified T> decodeOrNull(text: String): T? =
         runCatching { Json.decodeFromString<T>(text) }.getOrNull()
 
-    /** Applies [transform] and writes the inputs it may have changed to the saved state. */
+    /** Applies [transform] and writes the inputs and submitted entry it may have changed to the saved state. */
     private fun updateInputs(transform: (FormUiState) -> FormUiState) {
         val state = _uiState.updateAndGet(transform)
         saved[Saved.QUANTITY] = state.quantityText
@@ -138,6 +150,7 @@ class FormViewModel(private val erpRepository: ErpRepository, private val saved:
         saved[Saved.FINISHED] = state.isFinished
         saved[Saved.ITEMS] = Json.encodeToString(state.items)
         saved[Saved.REQUEST_ID] = state.requestId
+        saved[Saved.ENTRY] = (state.submitState as? NetworkState.Success)?.data?.let { Json.encodeToString(it) }
     }
 
     /** The BOM details and chosen batches belong to one BOM, quantity and explode setting. */
@@ -174,7 +187,7 @@ class FormViewModel(private val erpRepository: ErpRepository, private val saved:
         val state = _uiState.value
         if (state.fetchState is NetworkState.Success) {
             // Every input the details depend on resets `fetchState`, so these are still current
-            if (state.unworkableIngredients.isEmpty()) _effects.trySend(FormUiEffect.GotoNextPage)
+            if (state.unworkableIngredients.isEmpty()) _effects.trySend(FormUiEffect.GotoForm)
             return
         }
         if (!state.canContinue) {
@@ -202,7 +215,7 @@ class FormViewModel(private val erpRepository: ErpRepository, private val saved:
                 .onSuccess { results ->
                     val loaded = _uiState.updateAndGet { it.copy(fetchState = NetworkState.Success(results)) }
                     // Too small a run stays on Start, which names the ingredient under the quantity
-                    if (fromStart && loaded.unworkableIngredients.isEmpty()) _effects.send(FormUiEffect.GotoNextPage)
+                    if (fromStart && loaded.unworkableIngredients.isEmpty()) _effects.send(FormUiEffect.GotoForm)
                 }
                 .onFailure { e ->
                     Log.e(TAG, "loadBomDetails", e)
@@ -309,12 +322,75 @@ class FormViewModel(private val erpRepository: ErpRepository, private val saved:
         return null
     }
 
+    /** Keeps [FormUiState.requestId] on failure, so a retry can't create a second entry. */
+    fun submit() {
+        val state = _uiState.value
+        val bom = state.bom
+        val quantity = state.quantity
+        val expiryDays = state.expiryDays
+        if (!state.canSubmit || bom == null || quantity == null || expiryDays == null) return
+
+        _uiState.update { it.copy(submitState = NetworkState.Loading) }
+        viewModelScope.launch {
+            erpRepository.createManufactureEntry(
+                bom = bom.name,
+                quantity = quantity,
+                items = state.items,
+                expiryDate = dateFromToday(expiryDays),
+                explode = state.explode,
+                isFinished = state.isFinished,
+                requestId = state.requestId,
+            )
+                .onSuccess { entry ->
+                    updateInputs { it.copy(submitState = NetworkState.Success(entry)) }
+                    _effects.send(FormUiEffect.GotoSummary)
+                }
+                .onFailure { e ->
+                    Log.e(TAG, "submit", e)
+                    _uiState.update { it.copy(submitState = NetworkState.Error(ErpError.from(e))) }
+                }
+        }
+    }
+
+    /** "Same BOM again": keeps every setting from Start and the loaded BOM, and clears the batches. */
+    fun startAgain() {
+        updateInputs {
+            it.copy(
+                items = emptyMap(),
+                requestId = newRequestId(),
+                submitState = NetworkState.Idle,
+                printState = NetworkState.Idle,
+            )
+        }
+    }
+
+    fun printLabel() {
+        val state = _uiState.value
+        val entry = (state.submitState as? NetworkState.Success)?.data ?: return
+        if (state.printState is NetworkState.Loading) return
+
+        _uiState.update { it.copy(printState = NetworkState.Loading) }
+        viewModelScope.launch {
+            labelPrinter.print(entry.toLabel())
+                .onSuccess { _uiState.update { it.copy(printState = NetworkState.Success(Unit)) } }
+                .onFailure { e ->
+                    Log.e(TAG, "printLabel", e)
+                    _uiState.update { it.copy(printState = NetworkState.Error(e)) }
+                    _effects.send(FormUiEffect.ShowToast(R.string.printer_not_ready))
+                }
+        }
+    }
+
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val savedStateHandle = createSavedStateHandle()
                 val application = (this[APPLICATION_KEY] as MainApplication)
-                FormViewModel(erpRepository = application.container.erpRepository, saved = savedStateHandle)
+                FormViewModel(
+                    erpRepository = application.container.erpRepository,
+                    saved = savedStateHandle,
+                    labelPrinter = application.container.labelPrinter,
+                )
             }
         }
     }

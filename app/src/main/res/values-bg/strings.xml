@@ -69,4 +69,10 @@
     <string name="edit_batch_label">Редактиране на партида</string>
     <string name="add_label">Добави</string>
     <string name="batch_ingredient">Съставка: %1$s</string>
+    <string name="production_date_label">Произведено</string>
+    <string name="expiry_date_label">Изтича</string>
+    <string name="stock_entry_label">Складов запис</string>
+    <string name="print_label">Печат на етикет</string>
+    <string name="same_bom_again_label">Същата СНМ отново</string>
+    <string name="done_label">Готово</string>
 </resources>
