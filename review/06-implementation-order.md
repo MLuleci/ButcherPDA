@@ -8,7 +8,7 @@ The server work ([04-server-changes.md](04-server-changes.md)) is done. This is 
 
 Section references point to [00-summary.md](00-summary.md) unless another file is named. "§1 #3" means item 3 in the summary's section 1 table.
 
-**Progress:** Phases 0–3 are done. Steps marked *(done)* are committed and pushed. Where the implementation made a decision the plan left open, or differs from it, there's an **Implementation notes** list under the step.
+**Progress:** Phases 0–4 are done. Steps marked *(done)* are committed and pushed. Where the implementation made a decision the plan left open, or differs from it, there's an **Implementation notes** list under the step.
 
 ---
 
@@ -220,14 +220,21 @@ Fix the crashes and set up the structure the new flow needs.
 
 ---
 
-## Phase 4: Batch dialog (2 days)
+## Phase 4: Batch dialog (2 days) *(done)*
 
 The core of the app. It's still driven by manual entry here; scanning plugs in during Phase 5.
 
-### Step 4.1: Dialog state in the Form route
+### Step 4.1: Dialog state in the Form route *(done)*
 - **`BatchDialogState`** (`Adding(BatchInput)` / `Editing(BatchInfo)`), held in a saveable way (2.1).
 - **Opening it:** the + button opens `Adding("")`. The batch rows' edit action opens `Editing(batch)`.
 - **The + button** gets a translated content description and a bigger touch target (03, finding 10).
+
+**Implementation notes:**
+- **File:** `components/BatchDialogState.kt` holds `BatchInput`, `BatchDialogState` and `BatchInfo` (moved from `IngredientTable.kt`).
+- **Saving:** `BatchDialogStateSaver` stores the state as JSON, like `FormViewModel`'s saved inputs, so no Parcelize plugin is needed.
+- **Owner:** the Form route in `MainApp.kt` holds the state and passes it to `FormScreen`, so the scanner can reach it in Step 5.3.
+- **The + button:** a full-width `OutlinedButton`, at least 56dp tall, with the icon and the "Add batch" label. The icon has no description, since the label says it.
+- **Row swipes:** swiping right edits and swiping left deletes, and the row slides back after each. The row has a surface background, and the action icons use `onPrimary` / `onError`. There's no delete confirmation yet, and the actions are still swipe-only (Phase 7).
 
 ### Step 4.2: Rework `BatchDialog`
 - **Batch number:** comes from the caller (2.1).
@@ -248,11 +255,27 @@ The core of the app. It's still driven by manual entry here; scanning plugs in d
   - Taller buttons (03, B7).
 - **Saved state:** no non-saveable types in `rememberSaveable` (§1 #4).
 
-### Step 4.3: `upsertBatch` / `removeBatch`
+**Implementation notes:**
+- **Lookup in the ViewModel:** the checks are in `FormViewModel.lookupBatch`, not the dialog, so they're unit-tested against the fake. It returns a `BatchMatch` (batch, matched ingredient, prefill) or a `BatchLookupError`: `InvalidInput`, `NotFound`, `AlreadyAdded`, `NotInRecipe(batch)` or `Failed(ErpError)`. It replaces `FetchBatchError`, and `Failed` shows the same messages as the rest of the app via `errorText`.
+- **Case:** the server matches batch names case-insensitively (`beef.0001` returns `BEEF.0001`, checked on the dev server), so `FormUiState.hasBatch` ignores case.
+- **Prefill:** `FormUiState.prefillQuantity` is what's still needed, rounded for whole-number units and null when nothing is.
+- **Dialog state:** only the quantity text and `quantityTyped` are saved. The lookup result is `remember(input)`, so it resets as soon as the batch number changes and an earlier match can't be added.
+- **Edit mode:** the batch field is read-only, and Save needs a valid quantity that differs from the original.
+- **Also done:**
+  - The supporting line under the batch field is always reserved, and shows "Ingredient: …" once matched.
+  - Batch numbers are typed in capitals, with `ImeAction.Next`.
+  - The buttons are Add / Save.
+  - `ConfirmCancelButtons` buttons are at least 56dp tall, and its padding moved to `BomSelect`.
+
+### Step 4.3: `upsertBatch` / `removeBatch` *(done)*
 - Return errors instead of crashing. Reject duplicates and items that aren't in the recipe here too (2.3).
 - *Partly done in Step 2.2:* both already return a `BatchChangeError?` instead of throwing. What's left is adding the duplicate (add mode only) and not-in-recipe checks.
 
-**Done when:** with the fake repository, you can add, edit and remove batches by typing. Duplicates, unknown batches, wrong items and fractional Nos quantities are all rejected under the right field, and Submit enables only when every ingredient is in range.
+**Implementation notes:**
+- **Split:** `upsertBatch` is now `addBatch` and `updateBatch`. Both reject invalid input, items not in the loaded BOM (`NOT_IN_RECIPE`) and fractions for whole-number ingredients. `addBatch` also rejects batches already on the form (`ALREADY_ADDED`, ignoring case). `updateBatch` only changes batches already on the form (`NOT_FOUND` otherwise).
+- **The dialog ignores these errors:** its lookup has already run the same checks, so they're only a backstop for future code paths.
+
+**Done when:** with the fake repository, you can add, edit and remove batches by typing. Duplicates, unknown batches, wrong items and fractional Nos quantities are all rejected under the right field, and Submit enables only when every ingredient is in range. *Not compiled, tested or checked on the emulator yet.*
 
 ---
 
