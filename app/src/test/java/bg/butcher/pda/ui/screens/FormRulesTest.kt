@@ -163,4 +163,20 @@ class FormRulesTest {
         assertFalse(ready.copy(submitState = NetworkState.Loading).canSubmit)
         assertFalse(ready.copy(fetchState = NetworkState.Idle).canSubmit)
     }
+
+    @Test
+    fun ingredientLines_combineRulesForTheTable() {
+        val beef = ingredient("BEEF", 5.0)
+        val onion = ingredient("ONION", 2.5, wholeNumber = true)
+        val s = state(bom(beef, onion), mapOf("BEEF" to mapOf("B1" to 3.0, "B2" to 1.5)))
+
+        val lines = s.ingredientLines(s.bom!!)
+
+        assertEquals(listOf("BEEF", "ONION"), lines.map { it.itemCode })
+        assertEquals(4.5, lines[0].chosen, 1e-9)
+        assertEquals(Coverage.UNDER, lines[0].coverage)
+        assertEquals(null, lines[0].wholeNumberChoices)
+        assertEquals(Coverage.MISSING, lines[1].coverage)
+        assertEquals(2L..3L, lines[1].wholeNumberChoices)
+    }
 }

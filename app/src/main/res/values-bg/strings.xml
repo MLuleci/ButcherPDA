@@ -45,4 +45,15 @@
     <string name="quantity_too_small">Количеството е твърде малко за %1$s (нужни са %2$s %3$s). Увеличете количеството.</string>
     <string name="choose_bom_label">Докоснете, за да изберете</string>
     <string name="default_bom_label">По подразбиране</string>
+    <string name="coverage_amount">%1$s / %2$s %3$s</string>
+    <string name="coverage_at_least">поне %1$s %2$s</string>
+    <string name="coverage_at_most">най-много %1$s %2$s</string>
+    <string name="coverage_use">използвайте %1$s</string>
+    <string name="coverage_ok">В рамките на допустимото</string>
+    <string name="expires_in_days">Изтича след %1$d дни</string>
+    <string name="not_finished_label">Незавършено</string>
+    <string name="add_batch_label">Добави партида</string>
+    <string name="edit_label">Редактиране</string>
+    <string name="delete_label">Изтриване</string>
+    <string name="finished_summary">Завършено</string>
 </resources>

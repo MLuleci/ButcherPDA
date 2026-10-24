@@ -44,4 +44,15 @@
     <string name="quantity_too_small">The quantity is too small for %1$s (needs %2$s %3$s). Increase the quantity.</string>
     <string name="choose_bom_label">Tap to choose</string>
     <string name="default_bom_label">Default</string>
+    <string name="coverage_amount">%1$s / %2$s %3$s</string>
+    <string name="coverage_at_least">at least %1$s %2$s</string>
+    <string name="coverage_at_most">at most %1$s %2$s</string>
+    <string name="coverage_use">use %1$s</string>
+    <string name="coverage_ok">Within tolerance</string>
+    <string name="expires_in_days">Expires in %1$d days</string>
+    <string name="not_finished_label">Not finished</string>
+    <string name="add_batch_label">Add batch</string>
+    <string name="edit_label">Edit</string>
+    <string name="delete_label">Delete</string>
+    <string name="finished_summary">Finished</string>
 </resources>

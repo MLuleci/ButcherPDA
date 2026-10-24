@@ -284,6 +284,7 @@ The design is in 2.14 (summary). Search and Details only need Phase 1 (the netwo
 
 - **Glove use:** bigger touch targets and text, visible edit/delete actions instead of swipe-only (03, findings 10 and 12).
 - **Previews:** for the new components, including whole-number and error states (03, finding 16).
+- **Status colours in the theme:** the amber (UNDER) and green (OK) in `IngredientTable.kt`'s `coverageColor` are hard-coded, with a dark-theme variant each. Move them into the theme, e.g. a small `StatusColors` set provided next to the colour scheme, so other screens (the expiry banner on Details) can reuse them.
 - **Release build:**
   - Turn on R8 and check the SDK still works with the keep rules (05, section 7).
   - Set up signing (01, finding 17).
