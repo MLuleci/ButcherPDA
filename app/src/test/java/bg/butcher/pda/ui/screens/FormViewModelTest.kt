@@ -8,6 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -230,6 +231,53 @@ class FormViewModelTest {
 
         assertTrue(restored.uiState.value.fetchState is NetworkState.Success)
         assertEquals(1, restored.uiState.value.items.size)
+    }
+
+    private fun TestScope.loadedViewModel(): FormViewModel {
+        val vm = viewModel()
+        vm.setSelectedBom(meatballs)
+        vm.setQuantity("25")
+        vm.fetchBomDetails()
+        advanceUntilIdle()
+        return vm
+    }
+
+    @Test
+    fun lookup_matchesIngredientAndPrefillsWhatIsLeft() = runTest(dispatcher) {
+        val vm = loadedViewModel()
+
+        val first = vm.lookupBatch(" beef.0001 ") as NetworkState.Success
+        assertEquals("BEEF.0001", first.data.batch.name)
+        assertEquals("BEEF", first.data.ingredient.itemCode)
+        assertEquals(1.0, first.data.prefill!!, 1e-9)
+
+        vm.upsertBatch("BEEF", "BEEF.0001", 0.4)
+        val second = vm.lookupBatch("BEEF.0002") as NetworkState.Success
+        assertEquals(0.6, second.data.prefill!!, 1e-9)
+    }
+
+    @Test
+    fun lookup_rejectsBatchAlreadyAdded() = runTest(dispatcher) {
+        val vm = loadedViewModel()
+        vm.upsertBatch("BEEF", "BEEF.0001", 0.4)
+
+        assertEquals(NetworkState.Error(BatchLookupError.AlreadyAdded), vm.lookupBatch("beef.0001"))
+    }
+
+    @Test
+    fun lookup_rejectsUnknownBatch() = runTest(dispatcher) {
+        val vm = loadedViewModel()
+
+        assertEquals(NetworkState.Error(BatchLookupError.NotFound), vm.lookupBatch("NOPE.0001"))
+    }
+
+    @Test
+    fun lookup_rejectsBatchNotInRecipe() = runTest(dispatcher) {
+        val vm = loadedViewModel()
+
+        val result = vm.lookupBatch("PORK.0001") as NetworkState.Error
+        val error = result.error as BatchLookupError.NotInRecipe
+        assertEquals("PORK", error.batch.item)
     }
 
     @Test

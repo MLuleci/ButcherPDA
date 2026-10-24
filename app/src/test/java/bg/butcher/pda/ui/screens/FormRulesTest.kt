@@ -6,6 +6,7 @@ import bg.butcher.pda.model.BomSearchResultItem
 import bg.butcher.pda.network.NetworkState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -162,6 +163,34 @@ class FormRulesTest {
         assertFalse(ready.copy(expiryDaysText = "").canSubmit)
         assertFalse(ready.copy(submitState = NetworkState.Loading).canSubmit)
         assertFalse(ready.copy(fetchState = NetworkState.Idle).canSubmit)
+    }
+
+    @Test
+    fun prefill_isWhatIsLeft() {
+        val beef = ingredient("BEEF", 5.0)
+        val s = state(bom(beef))
+
+        assertEquals(5.0, s.prefillQuantity(beef)!!, 1e-9)
+        assertEquals(0.4, s.copy(items = mapOf("BEEF" to mapOf("B1" to 4.6))).prefillQuantity(beef)!!, 1e-9)
+        assertNull(s.copy(items = mapOf("BEEF" to mapOf("B1" to 5.2))).prefillQuantity(beef))
+    }
+
+    @Test
+    fun prefill_roundsWholeNumbers() {
+        val onion = ingredient("ONION", 2.4, wholeNumber = true)
+        val s = state(bom(onion))
+
+        assertEquals(2.0, s.prefillQuantity(onion)!!, 0.0)
+        assertEquals(3.0, s.prefillQuantity(ingredient("ONION", 2.5, wholeNumber = true))!!, 0.0)
+        assertNull(s.prefillQuantity(ingredient("ONION", 0.3, wholeNumber = true)))
+    }
+
+    @Test
+    fun hasBatch_ignoresCase() {
+        val s = state(bom(ingredient("BEEF", 5.0)), mapOf("BEEF" to mapOf("BEEF.0001" to 1.0)))
+
+        assertTrue(s.hasBatch("beef.0001"))
+        assertFalse(s.hasBatch("BEEF.0002"))
     }
 
     @Test

@@ -66,4 +66,7 @@
     <string name="scan_ignored_while_editing">Сканирането е игнорирано. Затворете редакцията, за да добавите нова партида.</string>
     <string name="printer_not_ready">Принтерът не е готов. Проверете хартията.</string>
     <string name="submit_unknown">Изпращането не можа да бъде потвърдено. Опитайте отново, за да проверите.</string>
+    <string name="edit_batch_label">Редактиране на партида</string>
+    <string name="add_label">Добави</string>
+    <string name="batch_ingredient">Съставка: %1$s</string>
 </resources>

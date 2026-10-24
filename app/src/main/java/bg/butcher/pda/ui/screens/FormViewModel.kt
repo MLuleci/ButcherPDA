@@ -15,6 +15,7 @@ import bg.butcher.pda.R
 import bg.butcher.pda.data.ErpRepository
 import bg.butcher.pda.model.BatchDetails
 import bg.butcher.pda.model.BomDetails
+import bg.butcher.pda.model.BomDetailsItem
 import bg.butcher.pda.model.BomSearchResultItem
 import bg.butcher.pda.model.ManufactureEntry
 import bg.butcher.pda.network.ErpError
@@ -38,13 +39,20 @@ sealed interface FormUiEffect {
     data object GotoNextPage: FormUiEffect
 }
 
-enum class FetchBatchError {
-    NETWORK_ERROR,
-    REQUEST_FAILED,
-    FORBIDDEN,
-    INVALID_INPUT,
-    NOT_FOUND,
+sealed interface BatchLookupError {
+    data object InvalidInput : BatchLookupError
+    data object NotFound : BatchLookupError
+    data object AlreadyAdded : BatchLookupError
+    data class NotInRecipe(val batch: BatchDetails) : BatchLookupError
+    data class Failed(val error: ErpError) : BatchLookupError
 }
+
+/** A batch from the server and the recipe ingredient it counts towards. */
+data class BatchMatch(
+    val batch: BatchDetails,
+    val ingredient: BomDetailsItem,
+    val prefill: Double?,
+)
 
 enum class BatchChangeError {
     INVALID_INPUT,
@@ -202,27 +210,23 @@ class FormViewModel(private val erpRepository: ErpRepository, private val saved:
         }
     }
 
-    suspend fun fetchBatchDetails(batchNumber: String): NetworkState<BatchDetails, FetchBatchError> {
-        val batchNumber = batchNumber.trim()
-        if (batchNumber.isEmpty()) {
-            return NetworkState.Error(FetchBatchError.INVALID_INPUT)
-        }
+    suspend fun lookupBatch(batchNumber: String): NetworkState<BatchMatch, BatchLookupError> {
+        val number = batchNumber.trim()
+        if (number.isEmpty()) return NetworkState.Error(BatchLookupError.InvalidInput)
+        if (_uiState.value.hasBatch(number)) return NetworkState.Error(BatchLookupError.AlreadyAdded)
 
-        val result = erpRepository.getBatch(batchNumber)
-        return result.fold(
-            onSuccess = { item -> NetworkState.Success(item) },
-            onFailure = { error ->
-                val erpError = ErpError.from(error)
-                NetworkState.Error(
-                    when {
-                        erpError is ErpError.Network -> FetchBatchError.NETWORK_ERROR
-                        erpError is ErpError.Forbidden -> FetchBatchError.FORBIDDEN
-                        erpError is ErpError.Http && erpError.isNotFound -> FetchBatchError.NOT_FOUND
-                        else -> FetchBatchError.REQUEST_FAILED
-                    }
-                )
-            }
-        )
+        val batch = erpRepository.getBatch(number).getOrElse { e ->
+            val error = ErpError.from(e)
+            return NetworkState.Error(
+                if (error is ErpError.Http && error.isNotFound) BatchLookupError.NotFound else BatchLookupError.Failed(error)
+            )
+        }
+        val state = _uiState.value
+        // Again with the server's name, in case it differs from what was typed
+        if (state.hasBatch(batch.name)) return NetworkState.Error(BatchLookupError.AlreadyAdded)
+        val ingredient = state.bom?.items?.firstOrNull { it.itemCode == batch.item }
+            ?: return NetworkState.Error(BatchLookupError.NotInRecipe(batch))
+        return NetworkState.Success(BatchMatch(batch, ingredient, state.prefillQuantity(ingredient)))
     }
 
     fun setSelectedBom(bom: BomSearchResultItem) {

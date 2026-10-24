@@ -173,7 +173,7 @@ fun MainApp(
                         state = state,
                         dialog = dialog,
                         onDialogChange = { dialog = it },
-                        fetchBatchDetails = viewModel::fetchBatchDetails,
+                        lookupBatch = viewModel::lookupBatch,
                         onUpsertBatch = viewModel::upsertBatch,
                         onRemoveBatch = { itemCode, batchNumber -> viewModel.removeBatch(itemCode, batchNumber) },
                         onSubmit = {},

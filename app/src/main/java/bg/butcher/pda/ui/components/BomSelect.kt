@@ -130,6 +130,7 @@ fun BomSearch(
                             onConfirm = { onSelect(selectedItem) },
                             onCancel = { onSelect(null) },
                             confirmEnabled = selectedItem != null,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 5.dp),
                         )
                     }
                 }

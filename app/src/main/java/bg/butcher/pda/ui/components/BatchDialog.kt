@@ -2,166 +2,173 @@ package bg.butcher.pda.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import bg.butcher.pda.R
-import bg.butcher.pda.model.BatchDetails
+import bg.butcher.pda.model.BomDetailsItem
 import bg.butcher.pda.network.NetworkState
-import bg.butcher.pda.ui.screens.FetchBatchError
+import bg.butcher.pda.ui.screens.BatchLookupError
+import bg.butcher.pda.ui.screens.BatchMatch
+import bg.butcher.pda.util.formatDecimal
+import bg.butcher.pda.util.parseDecimal
 import bg.butcher.pda.util.validateQuantity
-import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
+private fun lookupErrorText(error: BatchLookupError): String = when (error) {
+    BatchLookupError.InvalidInput, BatchLookupError.NotFound -> stringResource(R.string.invalid_batch_no)
+    BatchLookupError.AlreadyAdded -> stringResource(R.string.batch_already_added)
+    is BatchLookupError.NotInRecipe -> stringResource(R.string.batch_not_in_recipe, error.batch.name, error.batch.itemName)
+    is BatchLookupError.Failed -> errorText(error.error)
+}
+
+@Composable
 fun BatchDialog(
-    fetchBatchDetails: suspend (String) -> NetworkState<BatchDetails, FetchBatchError>,
-    onSubmit: (BatchInfo) -> Unit,
+    state: BatchDialogState,
+    ingredients: List<BomDetailsItem>,
+    onBatchNumberChange: (String) -> Unit,
+    lookupBatch: suspend (String) -> NetworkState<BatchMatch, BatchLookupError>,
+    onSubmit: (itemCode: String, batchNumber: String, quantity: Double) -> Unit,
     onDismiss: () -> Unit,
-    initialValue: BatchInfo? = null,
-    isEditing: Boolean = false,
 ) {
-    var batch by rememberSaveable(initialValue) { mutableStateOf(initialValue ?: BatchInfo()) }
-    var batchNumberText by rememberSaveable(initialValue) { mutableStateOf(initialValue?.batchNumber ?: "") }
-    var status by rememberSaveable { mutableStateOf<NetworkState<BatchDetails, FetchBatchError>>(NetworkState.Idle) }
+    val editing = (state as? BatchDialogState.Editing)?.batch
+    val input = (state as? BatchDialogState.Adding)?.input
 
-    val isError = status is NetworkState.Error
-    val isLoading = status is NetworkState.Loading
-    val isDirty = batch != initialValue
+    // Not keyed on the batch number, so a typed quantity survives a new scan
+    var quantityText by rememberSaveable { mutableStateOf(editing?.quantity.orEmpty()) }
+    var quantityTyped by rememberSaveable { mutableStateOf(editing != null) }
+    // Reset with the batch number, so an earlier match can't be added for a new one
+    var lookup by remember(input) { mutableStateOf<NetworkState<BatchMatch, BatchLookupError>>(NetworkState.Idle) }
 
-    val isBatchValid = status is NetworkState.Success
-    val isQuantityValid = validateQuantity(batch.quantity, wholeNumber = false) == null
-
-    val canSubmit = isBatchValid && isQuantityValid && isDirty
-
-    val scope = rememberCoroutineScope()
-
-    LaunchedEffect(batchNumberText) {
-        val batchNumber = batchNumberText.trim()
-
-        // Invalidate any previous result immediately.
-        status = NetworkState.Idle
-
-        if (batchNumber.isEmpty()) {
-            return@LaunchedEffect
-        }
-
-        // Avoid requesting every intermediate edit.
-        delay(300.milliseconds)
-
-        status = NetworkState.Loading
-
-        val result = fetchBatchDetails(batchNumber)
-
-        // Protect against a lookup implementation that returns after
-        // cancellation instead of propagating CancellationException.
-        currentCoroutineContext().ensureActive()
-
-        status = result
-        (status as? NetworkState.Success)?.data?.let {
-            batch = batch.copy(
-                batchNumber = it.name,
-                itemCode = it.item,
-                uom = it.stockUom.orEmpty(),
-            )
+    LaunchedEffect(input) {
+        if (input == null) return@LaunchedEffect
+        val number = input.text.trim()
+        if (number.isEmpty()) return@LaunchedEffect
+        if (!input.fromScan) delay(300.milliseconds)
+        lookup = NetworkState.Loading
+        val result = lookupBatch(number)
+        lookup = result
+        if (result is NetworkState.Success && !quantityTyped) {
+            quantityText = result.data.prefill?.let { formatDecimal(it) }.orEmpty()
         }
     }
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(10.dp)
-        ) {
-            Column {
+
+    val match = (lookup as? NetworkState.Success)?.data
+    val ingredient = if (editing != null) {
+        ingredients.firstOrNull { it.itemCode == editing.itemCode }
+    } else {
+        match?.ingredient
+    }
+    val wholeNumber = ingredient?.wholeNumber == true
+    val quantity = parseDecimal(quantityText)?.takeIf { validateQuantity(quantityText, wholeNumber) == null }
+    val canSubmit = quantity != null && if (editing != null) {
+        quantity != parseDecimal(editing.quantity)
+    } else {
+        match != null
+    }
+
+    val batchFocus = remember { FocusRequester() }
+
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(dismissOnClickOutside = false)) {
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Text(
+                    text = stringResource(if (editing != null) R.string.edit_batch_label else R.string.add_batch_label),
+                    style = MaterialTheme.typography.titleLarge,
+                )
+                val error = (lookup as? NetworkState.Error)?.error
                 OutlinedTextField(
-                    value = batchNumberText,
-                    onValueChange = { batchNumberText = it },
+                    value = editing?.batchNumber ?: input?.text.orEmpty(),
+                    onValueChange = onBatchNumberChange,
                     label = { Text(stringResource(R.string.batch_label)) },
                     singleLine = true,
-                    enabled = !isEditing,
+                    readOnly = editing != null,
                     keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Characters,
                         autoCorrectEnabled = false,
                         keyboardType = KeyboardType.Text,
-                        imeAction = ImeAction.Done,
+                        imeAction = ImeAction.Next,
                     ),
-                    isError = isError,
+                    isError = error != null,
+                    // Always one line, so the dialog doesn't jump in height
                     supportingText = {
-                        (status as? NetworkState.Error)?.let {
-                            Text(
-                                text = stringResource(
-                                    when (it.error) {
-                                        FetchBatchError.NOT_FOUND -> R.string.invalid_batch_no
-                                        FetchBatchError.FORBIDDEN -> R.string.forbidden_error
-                                        FetchBatchError.NETWORK_ERROR -> R.string.network_error
-                                        else -> R.string.error_message
-                                    }
-                                )
-                            )
-                        }
+                        Text(
+                            when {
+                                error != null -> lookupErrorText(error)
+                                ingredient != null -> stringResource(R.string.batch_ingredient, ingredient.itemName)
+                                else -> ""
+                            }
+                        )
                     },
                     trailingIcon = {
-                        if (isLoading) {
-                            CircularProgressIndicator()
-                        } else if (isBatchValid) {
-                            Icon(imageVector = Icons.Default.Check, contentDescription = stringResource(R.string.valid_label))
+                        if (lookup is NetworkState.Loading) {
+                            CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(24.dp))
+                        } else if (match != null) {
+                            Icon(imageVector = Icons.Default.Check, contentDescription = null)
                         }
-                    }
-                )
-                QuantityInput(
-                    value = batch.quantity,
-                    onValueChange = { batch = batch.copy(quantity = it) },
-                    uom = (status as? NetworkState.Success)?.data?.stockUom.orEmpty(),
-                    wholeNumber = false,
-                )
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(20.dp),
+                    },
                     modifier = Modifier
-                        .padding(horizontal = 20.dp, vertical = 5.dp)
-                        .height(IntrinsicSize.Min)
                         .fillMaxWidth()
-                ) {
-                    OutlinedButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(stringResource(R.string.cancel_label))
-                    }
-                    Button(
-                        onClick = { onSubmit(batch) },
-                        enabled = canSubmit,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(stringResource(R.string.select_label))
-                    }
+                        .focusRequester(batchFocus)
+                )
+                // Inside the dialog's window, once the field is attached
+                LaunchedEffect(Unit) {
+                    if (input != null && !input.fromScan) batchFocus.requestFocus()
                 }
+                QuantityInput(
+                    value = quantityText,
+                    onValueChange = {
+                        quantityText = it
+                        quantityTyped = true
+                    },
+                    uom = ingredient?.uom ?: editing?.uom.orEmpty(),
+                    wholeNumber = wholeNumber,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                ConfirmCancelButtons(
+                    confirmLabel = stringResource(if (editing != null) R.string.save_label else R.string.add_label),
+                    cancelLabel = stringResource(R.string.cancel_label),
+                    onConfirm = {
+                        when {
+                            quantity == null -> {}
+                            editing != null -> onSubmit(editing.itemCode, editing.batchNumber, quantity)
+                            match != null -> onSubmit(match.ingredient.itemCode, match.batch.name, quantity)
+                        }
+                    },
+                    onCancel = onDismiss,
+                    confirmEnabled = canSubmit,
+                )
             }
         }
     }

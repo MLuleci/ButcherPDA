@@ -4,9 +4,11 @@ import bg.butcher.pda.model.BomDetails
 import bg.butcher.pda.model.BomDetailsItem
 import bg.butcher.pda.model.DEFAULT_TOLERANCE_PERCENT
 import bg.butcher.pda.network.NetworkState
+import bg.butcher.pda.util.roundForErp
 import bg.butcher.pda.util.validateQuantity
 import kotlin.math.ceil
 import kotlin.math.floor
+import kotlin.math.roundToLong
 
 // Half a gram in kg; absorbs rounding in sums. Matches the server's `+ 0.0005`.
 private const val EPSILON = 0.0005
@@ -28,6 +30,17 @@ val FormUiState.canContinue: Boolean
     get() = canFetch && expiryDays != null
 
 fun FormUiState.chosenQuantity(itemCode: String): Double = items[itemCode].orEmpty().values.sum()
+
+// Frappe matches batch names case-insensitively
+fun FormUiState.hasBatch(batchNumber: String): Boolean =
+    items.values.any { batches -> batches.keys.any { it.equals(batchNumber, ignoreCase = true) } }
+
+/** What's still needed of [ingredient], rounded for whole-number units. Null when nothing is. */
+fun FormUiState.prefillQuantity(ingredient: BomDetailsItem): Double? {
+    val remaining = ingredient.quantity - chosenQuantity(ingredient.itemCode)
+    val amount = if (ingredient.wholeNumber) remaining.roundToLong().toDouble() else remaining.roundForErp()
+    return amount.takeIf { it > 0.0 }
+}
 
 fun FormUiState.allowedRange(ingredient: BomDetailsItem): ClosedFloatingPointRange<Double> {
     val margin = if (ingredient.wholeNumber) {

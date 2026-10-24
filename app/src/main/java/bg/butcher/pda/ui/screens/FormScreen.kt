@@ -21,7 +21,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import bg.butcher.pda.R
-import bg.butcher.pda.model.BatchDetails
 import bg.butcher.pda.model.BomDetails
 import bg.butcher.pda.model.BomDetailsItem
 import bg.butcher.pda.network.NetworkState
@@ -35,7 +34,6 @@ import bg.butcher.pda.ui.components.IngredientTable
 import bg.butcher.pda.ui.components.SubmitButton
 import bg.butcher.pda.ui.theme.AppTheme
 import bg.butcher.pda.util.formatDecimal
-import bg.butcher.pda.util.parseDecimal
 
 fun FormUiState.ingredientLines(bom: BomDetails): List<IngredientLine> = bom.items.map {
     IngredientLine(
@@ -74,7 +72,7 @@ fun FormScreen(
     state: FormUiState,
     dialog: BatchDialogState?,
     onDialogChange: (BatchDialogState?) -> Unit,
-    fetchBatchDetails: suspend (String) -> NetworkState<BatchDetails, FetchBatchError>,
+    lookupBatch: suspend (String) -> NetworkState<BatchMatch, BatchLookupError>,
     onUpsertBatch: (itemCode: String, batchNumber: String, quantity: Double) -> BatchChangeError?,
     onRemoveBatch: (itemCode: String, batchNumber: String) -> Unit,
     onSubmit: () -> Unit,
@@ -124,16 +122,14 @@ fun FormScreen(
                 }
                 if (dialog != null) {
                     BatchDialog(
-                        fetchBatchDetails = fetchBatchDetails,
-                        onSubmit = { batch ->
-                            val quantity = parseDecimal(batch.quantity)
-                            if (quantity != null && onUpsertBatch(batch.itemCode, batch.batchNumber, quantity) == null) {
-                                onDialogChange(null)
-                            }
+                        state = dialog,
+                        ingredients = bom.items,
+                        onBatchNumberChange = { onDialogChange(BatchDialogState.Adding(BatchInput(it))) },
+                        lookupBatch = lookupBatch,
+                        onSubmit = { itemCode, batchNumber, quantity ->
+                            if (onUpsertBatch(itemCode, batchNumber, quantity) == null) onDialogChange(null)
                         },
                         onDismiss = { onDialogChange(null) },
-                        initialValue = (dialog as? BatchDialogState.Editing)?.batch,
-                        isEditing = dialog is BatchDialogState.Editing,
                     )
                 }
             }
@@ -183,7 +179,7 @@ fun FormScreen_Preview() {
             ),
             dialog = null,
             onDialogChange = {},
-            fetchBatchDetails = { NetworkState.Idle },
+            lookupBatch = { NetworkState.Idle },
             onUpsertBatch = { _, _, _ -> null },
             onRemoveBatch = { _, _ -> },
             onSubmit = {},

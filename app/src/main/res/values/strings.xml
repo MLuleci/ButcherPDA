@@ -65,4 +65,7 @@
     <string name="scan_ignored_while_editing">Scan ignored. Close the edit to add a new batch.</string>
     <string name="printer_not_ready">Printer not ready. Check the paper.</string>
     <string name="submit_unknown">Couldn\'t confirm the submission. Retry to check.</string>
+    <string name="edit_batch_label">Edit batch</string>
+    <string name="add_label">Add</string>
+    <string name="batch_ingredient">Ingredient: %1$s</string>
 </resources>
