@@ -18,7 +18,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
@@ -33,6 +36,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import bg.butcher.pda.R
+import bg.butcher.pda.ui.components.BatchDialogState
+import bg.butcher.pda.ui.components.BatchDialogStateSaver
 import bg.butcher.pda.ui.screens.FormScreen
 import bg.butcher.pda.ui.screens.FormViewModel
 import bg.butcher.pda.ui.screens.FormUiEffect
@@ -161,8 +166,16 @@ fun MainApp(
                     LaunchedEffect(viewModel) {
                         if (state.canFetch) viewModel.reloadBomDetails() else navController.popBackStack()
                     }
+                    var dialog by rememberSaveable(stateSaver = BatchDialogStateSaver) {
+                        mutableStateOf<BatchDialogState?>(null)
+                    }
                     FormScreen(
                         state = state,
+                        dialog = dialog,
+                        onDialogChange = { dialog = it },
+                        fetchBatchDetails = viewModel::fetchBatchDetails,
+                        onUpsertBatch = viewModel::upsertBatch,
+                        onRemoveBatch = { itemCode, batchNumber -> viewModel.removeBatch(itemCode, batchNumber) },
                         onSubmit = {},
                         onRetry = viewModel::reloadBomDetails,
                         modifier = Modifier.fillMaxSize()

@@ -5,28 +5,29 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import bg.butcher.pda.R
+import bg.butcher.pda.model.BatchDetails
 import bg.butcher.pda.model.BomDetails
 import bg.butcher.pda.model.BomDetailsItem
 import bg.butcher.pda.network.NetworkState
+import bg.butcher.pda.ui.components.BatchDialog
+import bg.butcher.pda.ui.components.BatchDialogState
+import bg.butcher.pda.ui.components.BatchInput
 import bg.butcher.pda.ui.components.Centered
 import bg.butcher.pda.ui.components.ErrorMessage
 import bg.butcher.pda.ui.components.IngredientLine
@@ -34,6 +35,7 @@ import bg.butcher.pda.ui.components.IngredientTable
 import bg.butcher.pda.ui.components.SubmitButton
 import bg.butcher.pda.ui.theme.AppTheme
 import bg.butcher.pda.util.formatDecimal
+import bg.butcher.pda.util.parseDecimal
 
 fun FormUiState.ingredientLines(bom: BomDetails): List<IngredientLine> = bom.items.map {
     IngredientLine(
@@ -70,11 +72,15 @@ private fun RunSummary(state: FormUiState, bom: BomDetails) {
 @Composable
 fun FormScreen(
     state: FormUiState,
+    dialog: BatchDialogState?,
+    onDialogChange: (BatchDialogState?) -> Unit,
+    fetchBatchDetails: suspend (String) -> NetworkState<BatchDetails, FetchBatchError>,
+    onUpsertBatch: (itemCode: String, batchNumber: String, quantity: Double) -> BatchChangeError?,
+    onRemoveBatch: (itemCode: String, batchNumber: String) -> Unit,
     onSubmit: () -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var showDialog by rememberSaveable { mutableStateOf(false) }
     Box(modifier = modifier) {
         when (state.fetchState) {
             is NetworkState.Error -> Centered { ErrorMessage(error = state.fetchState.error, onRetry = onRetry) }
@@ -91,15 +97,22 @@ fun FormScreen(
                         IngredientTable(
                             ingredients = state.ingredientLines(bom),
                             batches = state.items,
+                            onEdit = { onDialogChange(BatchDialogState.Editing(it)) },
+                            onDelete = onRemoveBatch,
                         )
                     }
-                    IconButton(
-                        onClick = { showDialog = true },
+                    OutlinedButton(
+                        onClick = { onDialogChange(BatchDialogState.Adding(BatchInput(""))) },
                         modifier = Modifier
                             .align(Alignment.CenterHorizontally)
                             .fillMaxWidth(.9f)
+                            .heightIn(min = 56.dp)
                     ) {
-                        Icon(Icons.Default.AddCircle, contentDescription = stringResource(R.string.add_batch_label))
+                        Icon(Icons.Default.AddCircle, contentDescription = null)
+                        Text(
+                            text = stringResource(R.string.add_batch_label),
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
                     }
                     SubmitButton(
                         label = stringResource(R.string.submit_label),
@@ -107,6 +120,20 @@ fun FormScreen(
                         enabled = state.canSubmit,
                         isLoading = state.submitState is NetworkState.Loading,
                         modifier = Modifier.align(Alignment.CenterHorizontally)
+                    )
+                }
+                if (dialog != null) {
+                    BatchDialog(
+                        fetchBatchDetails = fetchBatchDetails,
+                        onSubmit = { batch ->
+                            val quantity = parseDecimal(batch.quantity)
+                            if (quantity != null && onUpsertBatch(batch.itemCode, batch.batchNumber, quantity) == null) {
+                                onDialogChange(null)
+                            }
+                        },
+                        onDismiss = { onDialogChange(null) },
+                        initialValue = (dialog as? BatchDialogState.Editing)?.batch,
+                        isEditing = dialog is BatchDialogState.Editing,
                     )
                 }
             }
@@ -154,6 +181,11 @@ fun FormScreen_Preview() {
                     "ONION" to mapOf("ONION.0001" to 14.0),
                 ),
             ),
+            dialog = null,
+            onDialogChange = {},
+            fetchBatchDetails = { NetworkState.Idle },
+            onUpsertBatch = { _, _, _ -> null },
+            onRemoveBatch = { _, _ -> },
             onSubmit = {},
             onRetry = {},
             modifier = Modifier.fillMaxSize(),

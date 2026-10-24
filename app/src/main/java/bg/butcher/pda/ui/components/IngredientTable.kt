@@ -27,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -39,18 +40,12 @@ import androidx.compose.ui.unit.dp
 import bg.butcher.pda.R
 import bg.butcher.pda.ui.screens.Coverage
 import bg.butcher.pda.util.formatDecimal
+import kotlinx.coroutines.launch
 
 data class TableParameters(
     val cellPadding: Dp,
     val borderThickness: Dp,
     val borderColor: Color
-)
-
-data class BatchInfo(
-    val batchNumber: String = "",
-    val itemCode: String = "",
-    val quantity: String = "",
-    val uom: String = "",
 )
 
 data class BatchRow(
@@ -173,11 +168,13 @@ fun IngredientTableSection(
 @Composable
 fun IngredientTableRow(
     batch: BatchRow,
-    // TODO: Pass on callbacks to dialog
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
     params: TableParameters,
     modifier: Modifier = Modifier
 ) {
     val state = rememberSwipeToDismissBoxState()
+    val scope = rememberCoroutineScope()
     SwipeToDismissBox(
         state = state,
         modifier = modifier.fillMaxWidth(),
@@ -193,7 +190,7 @@ fun IngredientTableRow(
                             .background(MaterialTheme.colorScheme.primary)
                             .wrapContentSize(Alignment.CenterStart)
                             .padding(horizontal = 5.dp),
-                        tint = Color.White
+                        tint = MaterialTheme.colorScheme.onPrimary
                     )
                 }
                 SwipeToDismissBoxValue.EndToStart -> {
@@ -206,7 +203,7 @@ fun IngredientTableRow(
                             .background(MaterialTheme.colorScheme.error)
                             .wrapContentSize(Alignment.CenterEnd)
                             .padding(horizontal = 5.dp),
-                        tint = Color.White
+                        tint = MaterialTheme.colorScheme.onError
                     )
                 }
                 else -> {}
@@ -214,13 +211,18 @@ fun IngredientTableRow(
         },
         onDismiss = {
             when (it) {
-                SwipeToDismissBoxValue.StartToEnd -> {}
-                SwipeToDismissBoxValue.EndToStart -> {}
+                SwipeToDismissBoxValue.StartToEnd -> onEdit()
+                SwipeToDismissBoxValue.EndToStart -> onDelete()
                 else -> {}
             }
+            scope.launch { state.reset() }
         }
     ) {
-        Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+        Row(
+            modifier = Modifier
+                .height(IntrinsicSize.Min)
+                .background(MaterialTheme.colorScheme.surface)
+        ) {
             Text(
                 text = batch.batchNumber,
                 modifier = Modifier
@@ -242,6 +244,8 @@ fun IngredientTableRow(
 fun IngredientTable(
     ingredients: List<IngredientLine>,
     batches: Map<String, Map<String, Double>>,
+    onEdit: (BatchInfo) -> Unit,
+    onDelete: (itemCode: String, batchNumber: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val params = TableParameters(
@@ -280,6 +284,10 @@ fun IngredientTable(
                     HorizontalDivider(thickness = params.borderThickness, color = params.borderColor)
                     IngredientTableRow(
                         batch = BatchRow(batchNumber, quantity, ingredient.uom),
+                        onEdit = {
+                            onEdit(BatchInfo(batchNumber, ingredient.itemCode, formatDecimal(quantity), ingredient.uom))
+                        },
+                        onDelete = { onDelete(ingredient.itemCode, batchNumber) },
                         params = params,
                     )
                 }
