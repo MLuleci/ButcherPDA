@@ -2,7 +2,6 @@ package bg.butcher.pda.data
 
 import bg.butcher.pda.model.BatchDetails
 import bg.butcher.pda.model.BomDetails
-import bg.butcher.pda.model.BomSearchResult
 import bg.butcher.pda.model.BomSearchResultItem
 import bg.butcher.pda.model.ManufactureEntry
 import bg.butcher.pda.network.ErpService
@@ -42,7 +41,7 @@ class NetworkErpRepository(
 
     override suspend fun getBomDetails(
         bom: String,
-        quantity: Float,
+        quantity: Double,
         explode: Boolean
     ): Result<BomDetails> = apiCall {
         val result = service.getBomDetails(bom, quantity, explode)
@@ -51,9 +50,9 @@ class NetworkErpRepository(
 
     override suspend fun createManufactureEntry(
         bom: String,
-        quantity: Float,
-        items: Map<String, Map<String, Float>>,
-        expiryDate: LocalDate?,
+        quantity: Double,
+        items: Map<String, Map<String, Double>>,
+        expiryDate: LocalDate,
         explode: Boolean,
         isFinished: Boolean
     ): Result<ManufactureEntry> = apiCall {

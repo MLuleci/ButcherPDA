@@ -12,6 +12,6 @@ class NetworkErpRepositoryTest {
     @Test
     fun searchBom_returnsServiceData() = runTest {
         val result = repository.searchBom("item")
-        assertEquals(FakeDataSource.bomSearchResult.data, result.getOrThrow())
+        assertEquals(FakeDataSource.bomSearchResult, result.getOrThrow())
     }
 }

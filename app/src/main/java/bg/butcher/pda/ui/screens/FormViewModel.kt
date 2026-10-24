@@ -19,6 +19,7 @@ import bg.butcher.pda.model.BomSearchResultItem
 import bg.butcher.pda.model.ManufactureEntry
 import bg.butcher.pda.network.JobSlot
 import bg.butcher.pda.network.NetworkState
+import bg.butcher.pda.util.parseDecimal
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -50,13 +51,13 @@ data class FormUiState(
     // Assembly page:
     // `fetchState` is cleared when `selectedItem`, `quantityText`, or `explode` are changed
     val fetchState: NetworkState<BomDetails, String?> = NetworkState.Idle,
-    val items: Map<String, Map<String, Float>> = mapOf(),
+    val items: Map<String, Map<String, Double>> = mapOf(),
     val expiryDaysText: String = "",
     val isFinished: Boolean = true,
     val submitState: NetworkState<ManufactureEntry, String?> = NetworkState.Idle,
 ) {
-    val quantity: Float?
-        get() = quantityText.toFloatOrNull()?.takeIf { it.isFinite() && it > 0f }
+    val quantity: Double?
+        get() = parseDecimal(quantityText)?.takeIf { it > 0.0 }
 
     val canContinue: Boolean
         get() = quantity != null && selectedItem != null
@@ -164,10 +165,10 @@ class FormViewModel(private val erpRepository: ErpRepository, private val state:
         _uiState.update { it.copy(isFinished = isFinished) }
     }
 
-    fun upsertBatch(itemCode: String, batchNumber: String, quantity: Float) {
+    fun upsertBatch(itemCode: String, batchNumber: String, quantity: Double) {
         require(itemCode.isNotEmpty()) { "Item code cannot be empty" }
         require(batchNumber.isNotEmpty()) { "Batch number cannot be empty" }
-        require(quantity > 0f) { "Quantity cannot be zero or negative, was $quantity" }
+        require(quantity > 0.0) { "Quantity cannot be zero or negative, was $quantity" }
         _uiState.update { currentState ->
             val items = currentState.items.toMutableMap()
             val batches = items[itemCode]?.toMutableMap() ?: mutableMapOf()

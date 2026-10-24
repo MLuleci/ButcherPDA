@@ -8,10 +8,12 @@ import kotlinx.serialization.Serializable
  * See: https://github.com/MLuleci/ButcherERP/blob/master/my_app/my_app/api.py#L64
  */
 
+const val DEFAULT_TOLERANCE_PERCENT = 5.0
+
 @Serializable
 data class BomDetailsItem (
     @SerialName(value = "qty")
-    val quantity: Float,
+    val quantity: Double,
     @SerialName(value = "item_code")
     val itemCode: String,
     @SerialName(value = "item_name")
@@ -20,14 +22,16 @@ data class BomDetailsItem (
     @SerialName(value = "stock_uom")
     val stockUom: String,
     @SerialName(value = "conversion_factor")
-    val conversionFactor: Float,
+    val conversionFactor: Double,
+    @SerialName(value = "must_be_whole_number")
+    val wholeNumber: Boolean = false,
 )
 
 @Serializable
 data class BomDetails(
     val name: String,
     @SerialName(value = "qty")
-    val quantity: Float,
+    val quantity: Double,
     @SerialName(value = "item_code")
     val itemCode: String,
     @SerialName(value = "item_name")
@@ -38,10 +42,8 @@ data class BomDetails(
     @SerialName(value = "shelf_life_in_days")
     val shelfLife: Int,
     val items: List<BomDetailsItem>,
-) {
-}
-
-@Serializable
-data class BomDetailsWrapper(
-    val message: BomDetails
+    @SerialName(value = "tolerance_percent")
+    val tolerancePercent: Double = DEFAULT_TOLERANCE_PERCENT,
+    @SerialName(value = "must_be_whole_number")
+    val wholeNumber: Boolean = false,
 )

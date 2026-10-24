@@ -81,8 +81,8 @@ fun IngredientTableHeader(
 @Composable
 fun IngredientTableSection(
     name: String,
-    totalQuantity: Float,
-    requiredQuantity: Float,
+    totalQuantity: Double,
+    requiredQuantity: Double,
     uom: String,
     modifier: Modifier = Modifier
 ) {
@@ -168,7 +168,7 @@ fun IngredientTableRow(
 @Composable
 fun IngredientTable(
     ingredients: List<BomDetailsItem>,
-    batches: Map<String, Map<String, Float>>,
+    batches: Map<String, Map<String, Double>>,
     modifier: Modifier = Modifier,
 ) {
     val params = TableParameters(

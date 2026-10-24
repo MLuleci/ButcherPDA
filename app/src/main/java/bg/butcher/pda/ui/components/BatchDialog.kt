@@ -90,7 +90,7 @@ fun BatchDialog(
             batch = batch.copy(
                 batchNumber = it.name,
                 itemCode = it.item,
-                uom = it.uom,
+                uom = it.stockUom.orEmpty(),
             )
         }
     }
@@ -136,7 +136,7 @@ fun BatchDialog(
                 QuantityInput(
                     value = batch.quantity,
                     onValueChange = { batch = batch.copy(quantity = it) },
-                    uom = (status as? NetworkState.Success)?.data?.uom ?: "",
+                    uom = (status as? NetworkState.Success)?.data?.stockUom.orEmpty(),
                 )
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(20.dp),

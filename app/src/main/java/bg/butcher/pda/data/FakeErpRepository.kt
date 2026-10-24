@@ -91,14 +91,14 @@ class FakeErpRepository(
                 name = batchNumber,
                 item = fakeItemId(),
                 itemName = fakeWord(),
-                uom = "Kgs",
+                stockUom = "Kgs",
             )
         }
     }
 
     override suspend fun getBomDetails(
         bom: String,
-        quantity: Float,
+        quantity: Double,
         explode: Boolean
     ): Result<BomDetails> {
         delay(latency)
@@ -115,12 +115,12 @@ class FakeErpRepository(
                     repeat(Random.nextInt(1, 5)) {
                         add(
                             BomDetailsItem(
-                                quantity = (1f - Random.nextFloat()) * 10f,
+                                quantity = (1.0 - Random.nextDouble()) * 10.0,
                                 itemCode = fakeItemId(),
                                 itemName = fakeWord(),
                                 uom = "Kgs",
                                 stockUom = "Kgs",
-                                conversionFactor = 1f,
+                                conversionFactor = 1.0,
                             )
                         )
                     }
@@ -131,18 +131,21 @@ class FakeErpRepository(
 
     override suspend fun createManufactureEntry(
         bom: String,
-        quantity: Float,
-        items: Map<String, Map<String, Float>>,
-        expiryDate: LocalDate?,
+        quantity: Double,
+        items: Map<String, Map<String, Double>>,
+        expiryDate: LocalDate,
         explode: Boolean,
         isFinished: Boolean
     ): Result<ManufactureEntry> {
         delay(latency)
         return withFailure {
             ManufactureEntry(
-                name = fakeItemId(),
+                stockEntryId = "MAT-STE-${fakeId()}",
                 batchNumber = "BATCH.${fakeId()}",
+                itemCode = fakeItemId(),
                 itemName = fakeWord(),
+                quantity = quantity,
+                uom = "Kgs",
                 productionDate = Clock.System.now().toLocalDateTime(TimeZone.UTC).date,
                 expiryDate = expiryDate,
                 isFinished = isFinished

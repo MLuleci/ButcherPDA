@@ -11,15 +11,23 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class ManufactureEntry(
-    val name: String,
+    @SerialName(value = "name")
+    val stockEntryId: String,
     @SerialName(value = "batch_no")
     val batchNumber: String,
+    @SerialName(value = "item_code")
+    val itemCode: String,
     @SerialName(value = "item_name")
     val itemName: String,
+    @SerialName(value = "qty")
+    val quantity: Double,
+    val uom: String,
+    @SerialName(value = "must_be_whole_number")
+    val wholeNumber: Boolean = false,
     @SerialName(value = "production_date")
     val productionDate: LocalDate,
     @SerialName(value = "expiry_date")
-    val expiryDate: LocalDate?,
+    val expiryDate: LocalDate,
     @SerialName(value = "is_finished")
     val isFinished: Boolean
 )

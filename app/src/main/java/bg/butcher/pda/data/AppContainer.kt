@@ -5,8 +5,8 @@ import androidx.annotation.RawRes
 import bg.butcher.pda.R
 import bg.butcher.pda.network.ErpService
 import bg.butcher.pda.network.ErpServiceInterceptor
+import bg.butcher.pda.network.erpJson
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
-import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.tls.HandshakeCertificates
@@ -46,7 +46,7 @@ class DefaultAppContainer(context: Context): AppContainer {
         .build()
 
     private val retrofit: Retrofit = Retrofit.Builder()
-        .addConverterFactory(Json.asConverterFactory("application/json".toMediaType()))
+        .addConverterFactory(erpJson.asConverterFactory("application/json".toMediaType()))
         .baseUrl("http://localhost/") // Replaced by interceptor
         .client(okHttp)
         .build()

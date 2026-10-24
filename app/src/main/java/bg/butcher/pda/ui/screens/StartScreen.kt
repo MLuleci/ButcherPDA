@@ -125,7 +125,7 @@ fun BomSearch(
                                                 style = MaterialTheme.typography.labelSmall
                                             )
                                         }
-                                        if (item.isDefault == 1) {
+                                        if (item.isDefaultBom) {
                                             val tint = if (isSelected) {
                                                 MaterialTheme.colorScheme.onPrimary
                                             } else {
