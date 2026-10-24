@@ -6,6 +6,7 @@ import bg.butcher.pda.model.BomSearchResultItem
 import bg.butcher.pda.network.NetworkState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -167,6 +168,36 @@ class FormViewModelTest {
 
         assertTrue(loaded is NetworkState.Success)
         assertTrue(vm.uiState.value.fetchState === loaded)
+    }
+
+    @Test
+    fun continue_staysOnStartWhenRunIsTooSmall() = runTest(dispatcher) {
+        val vm = viewModel()
+        val effects = mutableListOf<FormUiEffect>()
+        backgroundScope.launch(dispatcher) { vm.effects.collect { effects += it } }
+        vm.setSelectedBom(meatballs)
+        // 3 meatballs need 0.36 onions; the only whole number within 0.5 of that is 0
+        vm.setQuantity("3")
+
+        vm.fetchBomDetails()
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.fetchState is NetworkState.Success)
+        assertEquals("ONION", vm.uiState.value.unworkableIngredients.single().itemCode)
+        assertTrue(effects.none { it is FormUiEffect.GotoNextPage })
+    }
+
+    @Test
+    fun continue_needsExpiry() = runTest(dispatcher) {
+        val vm = viewModel()
+        vm.setSelectedBom(meatballs)
+        vm.setQuantity("25")
+        vm.setDaysUntilExpiry("")
+
+        vm.fetchBomDetails()
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.fetchState is NetworkState.Idle)
     }
 
     @Test

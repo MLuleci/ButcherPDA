@@ -139,6 +139,7 @@ fun BatchDialog(
                     value = batch.quantity,
                     onValueChange = { batch = batch.copy(quantity = it) },
                     uom = (status as? NetworkState.Success)?.data?.stockUom.orEmpty(),
+                    wholeNumber = false,
                 )
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(20.dp),

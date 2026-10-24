@@ -41,4 +41,8 @@
     <string name="invalid_base_url">Въведете адрес, започващ с https://.</string>
     <string name="api_key_label">API ключ и тайна</string>
     <string name="invalid_api_key">Въведете ключа и тайната като api_key:api_secret.</string>
+    <string name="expiry_default_hint">По подразбиране за продукта: %1$d дни</string>
+    <string name="quantity_too_small">Количеството е твърде малко за %1$s (нужни са %2$s %3$s). Увеличете количеството.</string>
+    <string name="choose_bom_label">Докоснете, за да изберете</string>
+    <string name="default_bom_label">По подразбиране</string>
 </resources>

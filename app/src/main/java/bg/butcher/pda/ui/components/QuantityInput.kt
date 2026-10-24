@@ -1,7 +1,6 @@
 package bg.butcher.pda.ui.components
 
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,9 +18,12 @@ fun QuantityInput(
     value: String,
     onValueChange: (String) -> Unit,
     uom: String,
+    wholeNumber: Boolean,
     modifier: Modifier = Modifier,
+    // Shown when the value itself is valid, e.g. a rule that needs the server's data
+    extraError: String? = null,
 ) {
-    val error = validateQuantity(value, wholeNumber = false)
+    val error = validateQuantity(value, wholeNumber)?.let { stringResource(it) } ?: extraError
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
@@ -29,20 +31,17 @@ fun QuantityInput(
         singleLine = true,
         keyboardOptions = KeyboardOptions(
             autoCorrectEnabled = false,
-            keyboardType = KeyboardType.Decimal,
+            // Hides the decimal key on most keyboards; the validator is the real check
+            keyboardType = if (wholeNumber) KeyboardType.Number else KeyboardType.Decimal,
             imeAction = ImeAction.Done,
         ),
-        trailingIcon = {
+        suffix = {
             if (uom.isNotEmpty()) {
-                Text(uom, style = MaterialTheme.typography.labelSmall)
+                Text(uom)
             }
         },
         isError = error != null,
-        supportingText = {
-            error?.let {
-                Text(stringResource(it), color = MaterialTheme.colorScheme.error)
-            }
-        },
+        supportingText = { error?.let { Text(it) } },
         modifier = modifier
     )
 }
@@ -54,7 +53,21 @@ fun QuantityInput_Valid_Preview() {
         QuantityInput(
             value = "12.3",
             onValueChange = {},
-            uom ="Kgs"
+            uom = "Kgs",
+            wholeNumber = false,
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun QuantityInput_WholeNumber_Preview() {
+    AppTheme {
+        QuantityInput(
+            value = "2.5",
+            onValueChange = {},
+            uom = "Nos",
+            wholeNumber = true,
         )
     }
 }
@@ -66,7 +79,8 @@ fun QuantityInput_Invalid_Preview() {
         QuantityInput(
             value = "",
             onValueChange = {},
-            uom ="Kgs"
+            uom = "Kgs",
+            wholeNumber = false,
         )
     }
 }
@@ -78,7 +92,8 @@ fun QuantityInput_NoUOM_Preview() {
         QuantityInput(
             value = "12.3",
             onValueChange = {},
-            uom = ""
+            uom = "",
+            wholeNumber = false,
         )
     }
 }

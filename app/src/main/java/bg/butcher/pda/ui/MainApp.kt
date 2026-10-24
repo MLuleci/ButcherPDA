@@ -147,6 +147,8 @@ fun MainApp(
                         state = state,
                         onQuantityChanged = viewModel::setQuantity,
                         onExplodeChanged = viewModel::setExplode,
+                        onExpiryChanged = viewModel::setDaysUntilExpiry,
+                        onFinishedChanged = viewModel::setIsFinished,
                         onQueryChanged = viewModel::searchForBom,
                         onItemSelected = viewModel::setSelectedBom,
                         onContinue = viewModel::fetchBomDetails,
@@ -161,8 +163,6 @@ fun MainApp(
                     }
                     FormScreen(
                         state = state,
-                        onExpiryChanged = viewModel::setDaysUntilExpiry,
-                        onFinishedChanged = viewModel::setIsFinished,
                         onSubmit = {},
                         onRetry = viewModel::reloadBomDetails,
                         modifier = Modifier.fillMaxSize()

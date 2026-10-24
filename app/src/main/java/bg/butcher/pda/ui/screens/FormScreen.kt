@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -27,16 +26,12 @@ import bg.butcher.pda.R
 import bg.butcher.pda.network.NetworkState
 import bg.butcher.pda.ui.components.Centered
 import bg.butcher.pda.ui.components.ErrorMessage
-import bg.butcher.pda.ui.components.ExpiryInput
 import bg.butcher.pda.ui.components.IngredientTable
-import bg.butcher.pda.ui.components.RowWithLabel
 import bg.butcher.pda.ui.components.SubmitButton
 
 @Composable
 fun FormScreen(
     state: FormUiState,
-    onExpiryChanged: (String) -> Unit,
-    onFinishedChanged: (Boolean) -> Unit,
     onSubmit: () -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
@@ -55,10 +50,6 @@ fun FormScreen(
                 ) {
                     Text(stringResource(R.string.bom_label) + ": ${bom.itemName} (${bom.name})")
                     Text(stringResource(R.string.quantity_label) + ": ${bom.quantity} ${bom.uom}")
-                    ExpiryInput(
-                        value = state.expiryDaysText,
-                        onValueChange = onExpiryChanged,
-                    )
                     Box(modifier = Modifier.weight(1f)) {
                         IngredientTable(
                             ingredients = bom.items,
@@ -73,15 +64,6 @@ fun FormScreen(
                     ) {
                         Icon(Icons.Default.AddCircle, contentDescription = "Add")
                     }
-                    RowWithLabel(
-                        label = R.string.finished_label,
-                        content = {
-                            Checkbox(
-                                checked = state.isFinished,
-                                onCheckedChange = onFinishedChanged
-                            )
-                        }
-                    )
                     SubmitButton(
                         label = stringResource(R.string.submit_label),
                         onClick = onSubmit,

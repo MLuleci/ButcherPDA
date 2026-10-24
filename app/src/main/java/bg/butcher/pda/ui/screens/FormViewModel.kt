@@ -164,10 +164,10 @@ class FormViewModel(private val erpRepository: ErpRepository, private val saved:
         val state = _uiState.value
         if (state.fetchState is NetworkState.Success) {
             // Every input the details depend on resets `fetchState`, so these are still current
-            _effects.trySend(FormUiEffect.GotoNextPage)
+            if (state.unworkableIngredients.isEmpty()) _effects.trySend(FormUiEffect.GotoNextPage)
             return
         }
-        if (!state.canFetch) {
+        if (!state.canContinue) {
             _effects.trySend(FormUiEffect.ShowToast(R.string.incomplete_message))
             return
         }
@@ -190,8 +190,9 @@ class FormViewModel(private val erpRepository: ErpRepository, private val saved:
         bomFetchJob.replace {
             erpRepository.getBomDetails(selectedItem.name, quantity, state.explode)
                 .onSuccess { results ->
-                    _uiState.update { it.copy(fetchState = NetworkState.Success(results)) }
-                    if (fromStart) _effects.send(FormUiEffect.GotoNextPage)
+                    val loaded = _uiState.updateAndGet { it.copy(fetchState = NetworkState.Success(results)) }
+                    // Too small a run stays on Start, which names the ingredient under the quantity
+                    if (fromStart && loaded.unworkableIngredients.isEmpty()) _effects.send(FormUiEffect.GotoNextPage)
                 }
                 .onFailure { e ->
                     Log.e(TAG, "loadBomDetails", e)
