@@ -14,7 +14,6 @@
     <string name="retry_label">Опитай отново</string>
     <string name="no_results">Няма резултати</string>
     <string name="continue_label">Продължи</string>
-    <string name="invalid_label">Невалидна стойност</string>
     <string name="select_label">Избери</string>
     <string name="bom_label">CHM</string>
     <string name="none_label">Няма</string>
@@ -37,4 +36,9 @@
     <string name="unauthorized_error">Сървърът отхвърли API ключа. Проверете го в Настройки.</string>
     <string name="forbidden_error">Това устройство няма право да прави това. Помолете администратор да провери ролята му PDA User.</string>
     <string name="unexpected_response_error">Неочакван отговор от сървъра.</string>
+    <string name="settings_missing_error">Адресът на сървъра или API ключът липсва или е невалиден. Проверете ги в Настройки.</string>
+    <string name="base_url_label">Адрес на сървъра</string>
+    <string name="invalid_base_url">Въведете адрес, започващ с https://.</string>
+    <string name="api_key_label">API ключ и тайна</string>
+    <string name="invalid_api_key">Въведете ключа и тайната като api_key:api_secret.</string>
 </resources>

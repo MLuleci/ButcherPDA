@@ -39,7 +39,7 @@ class DefaultAppContainer(context: Context): AppContainer {
 
     private val okHttp = OkHttpClient.Builder()
         .sslSocketFactory(certificates.sslSocketFactory(), certificates.trustManager)
-        .addInterceptor(ErpServiceInterceptor(settingsRepository))
+        .addInterceptor(ErpServiceInterceptor(settingsRepository.settings))
         .build()
 
     private val service: ErpService by lazy {

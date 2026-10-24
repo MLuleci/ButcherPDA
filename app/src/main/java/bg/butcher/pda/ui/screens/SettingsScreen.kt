@@ -13,6 +13,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import bg.butcher.pda.R
@@ -20,9 +23,15 @@ import bg.butcher.pda.R
 @Composable
 fun ValidatedTextField(
     label: String,
+    error: String,
     state: SettingState,
     onChanged: (String) -> Unit,
+    enabled: Boolean,
+    placeholder: String? = null,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
 ) {
+    val showError = enabled && !state.isValid
     OutlinedTextField(
         modifier = Modifier
             .fillMaxWidth()
@@ -30,14 +39,19 @@ fun ValidatedTextField(
         value = state.value,
         onValueChange = onChanged,
         label = { Text(label) },
-        isError = !state.isValid,
+        placeholder = placeholder?.let { { Text(it) } },
+        singleLine = true,
+        enabled = enabled,
+        isError = showError,
         supportingText = {
-            if (!state.isValid) {
-                Text(stringResource(R.string.invalid_label))
+            if (showError) {
+                Text(error)
             }
         },
+        visualTransformation = visualTransformation,
         keyboardOptions = KeyboardOptions(
             autoCorrectEnabled = false,
+            keyboardType = keyboardType,
             imeAction = ImeAction.Done
         )
     )
@@ -49,21 +63,29 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory),
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val canSave = viewModel.isValid() && uiState.isDirty
     Column (modifier = modifier) {
         ValidatedTextField(
-            label = "API URL",
+            label = stringResource(R.string.base_url_label),
+            error = stringResource(R.string.invalid_base_url),
             state = uiState.baseUrl,
-            onChanged = { viewModel.setBaseUrl(it) }
+            onChanged = { viewModel.setBaseUrl(it) },
+            enabled = uiState.isLoaded,
+            placeholder = "https://erp.example.com",
+            keyboardType = KeyboardType.Uri,
         )
         ValidatedTextField(
-            label = "API Key",
+            label = stringResource(R.string.api_key_label),
+            error = stringResource(R.string.invalid_api_key),
             state = uiState.apiKey,
-            onChanged = { viewModel.setApiKey(it) }
+            onChanged = { viewModel.setApiKey(it) },
+            enabled = uiState.isLoaded,
+            placeholder = "api_key:api_secret",
+            keyboardType = KeyboardType.Password,
+            visualTransformation = PasswordVisualTransformation(),
         )
         Button(
             onClick = { viewModel.save() },
-            enabled = canSave
+            enabled = uiState.canSave
         ) {
             Text(stringResource(R.string.save_label))
         }

@@ -16,6 +16,9 @@ sealed class ErpError(message: String? = null, cause: Throwable? = null) : Excep
     /** The server answered, but the body isn't what the app expects. */
     class UnexpectedResponse(cause: Throwable) : ErpError(cause.message, cause)
 
+    /** The base URL or API key in Settings is missing or invalid; nothing was sent. */
+    class NotConfigured : ErpError()
+
     /** 401: missing or wrong API key. */
     class Unauthorized : ErpError()
 
@@ -33,6 +36,7 @@ sealed class ErpError(message: String? = null, cause: Throwable? = null) : Excep
     companion object {
         fun from(throwable: Throwable): ErpError = when (throwable) {
             is ErpError -> throwable
+            is InvalidSettingsException -> NotConfigured()
             is IOException -> Network(throwable)
             is SerializationException -> UnexpectedResponse(throwable)
             is HttpException -> fromHttp(throwable.code(), throwable.response()?.errorBody()?.string())
