@@ -12,21 +12,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import bg.butcher.pda.R
 import bg.butcher.pda.ui.theme.AppTheme
+import bg.butcher.pda.util.validateQuantity
 
-fun validateQuantity(text: String): Int? {
-    if (text.isBlank()) {
-        return R.string.value_required
-    }
-
-    val value = text.toFloatOrNull()
-        ?: return R.string.invalid_number
-
-    if (!value.isFinite() || value <= 0f) {
-        return R.string.must_be_positive
-    }
-
-    return null
-}
 @Composable
 fun QuantityInput(
     value: String,
@@ -34,7 +21,7 @@ fun QuantityInput(
     uom: String,
     modifier: Modifier = Modifier,
 ) {
-    val error = validateQuantity(value)
+    val error = validateQuantity(value, wholeNumber = false)
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,

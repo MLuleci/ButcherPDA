@@ -29,6 +29,7 @@
     <string name="invalid_number">Enter a valid number.</string>
     <string name="must_be_positive">Number must be greater than zero.</string>
     <string name="value_required">A value is required.</string>
+    <string name="whole_number_required">Enter a whole number.</string>
     <string name="incomplete_message">Please fill in the required fields.</string>
     <string name="finished_label">Is finished</string>
     <string name="network_error">Network error</string>

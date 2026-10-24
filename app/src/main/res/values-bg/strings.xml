@@ -30,6 +30,7 @@
     <string name="invalid_number">Въведете валидно число.</string>
     <string name="must_be_positive">Числото трябва да е по-голямо от нула.</string>
     <string name="value_required">Изисква се стойност.</string>
+    <string name="whole_number_required">Въведете цяло число.</string>
     <string name="incomplete_message">Моля, попълнете задължителните полета.</string>
     <string name="finished_label">Завършено</string>
     <string name="network_error">Мрежова грешка</string>

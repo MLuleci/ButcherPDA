@@ -34,6 +34,7 @@ import bg.butcher.pda.R
 import bg.butcher.pda.model.BatchDetails
 import bg.butcher.pda.network.NetworkState
 import bg.butcher.pda.ui.screens.FetchBatchError
+import bg.butcher.pda.util.validateQuantity
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
@@ -57,7 +58,7 @@ fun BatchDialog(
     val isDirty = batch != initialValue
 
     val isBatchValid = status is NetworkState.Success
-    val isQuantityValid = validateQuantity(batch.quantity) == null
+    val isQuantityValid = validateQuantity(batch.quantity, wholeNumber = false) == null
 
     val canSubmit = isBatchValid && isQuantityValid && isDirty
 
