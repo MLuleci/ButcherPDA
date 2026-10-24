@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -23,19 +22,20 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import bg.butcher.pda.R
+import bg.butcher.pda.ui.MANUFACTURE_GRAPH
 import bg.butcher.pda.ui.MainScreen
 import bg.butcher.pda.ui.theme.AppTheme
 
 data class NavButton(
-    val page: MainScreen,
+    val route: String,
     @StringRes val title: Int,
     val icon: ImageVector,
 )
 
+// Search is added back with its screen in Phase 6
 val buttons = listOf(
-    NavButton(MainScreen.Start, R.string.select_title, Icons.Filled.Add),
-    NavButton(MainScreen.Search, R.string.search_title, Icons.Filled.Search),
-    NavButton(MainScreen.Settings, R.string.settings_title, Icons.Filled.Settings),
+    NavButton(MANUFACTURE_GRAPH, R.string.select_title, Icons.Filled.Add),
+    NavButton(MainScreen.Settings.name, R.string.settings_title, Icons.Filled.Settings),
 )
 
 @Composable
@@ -54,7 +54,7 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(10.dp))
             }
             TextButton(
-                onClick = { onButtonClicked(item.page.name) },
+                onClick = { onButtonClicked(item.route) },
                 modifier = Modifier.width(150.dp),
             ) {
                 Row(

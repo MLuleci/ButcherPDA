@@ -3,7 +3,9 @@ package bg.butcher.pda.ui.screens
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -63,7 +65,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory),
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    Column (modifier = modifier) {
+    Column(modifier = modifier.verticalScroll(rememberScrollState())) {
         ValidatedTextField(
             label = stringResource(R.string.base_url_label),
             error = stringResource(R.string.invalid_base_url),

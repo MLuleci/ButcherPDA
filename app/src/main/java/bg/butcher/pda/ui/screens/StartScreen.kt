@@ -16,7 +16,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
@@ -226,7 +228,9 @@ fun StartScreen(
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(10.dp),
-        modifier = modifier.padding(20.dp)
+        modifier = modifier
+            .verticalScroll(rememberScrollState())
+            .padding(20.dp)
     ) {
         RowWithLabel(
             label = R.string.bom_label,

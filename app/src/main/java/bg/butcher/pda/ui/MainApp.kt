@@ -4,8 +4,6 @@ import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -26,10 +24,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import bg.butcher.pda.R
 import bg.butcher.pda.ui.screens.FormScreen
@@ -38,6 +39,9 @@ import bg.butcher.pda.ui.screens.FormUiEffect
 import bg.butcher.pda.ui.screens.HomeScreen
 import bg.butcher.pda.ui.screens.StartScreen
 import bg.butcher.pda.ui.screens.SettingsScreen
+
+// Nested graph for the manufacturing flow; its screens share one FormViewModel
+const val MANUFACTURE_GRAPH = "manufacture"
 
 enum class MainScreen(@StringRes val title: Int) {
     Home(title = R.string.app_name),
@@ -85,9 +89,8 @@ fun MainApp(
     navController: NavHostController = rememberNavController()
 ) {
     val backStackEntry by navController.currentBackStackEntryAsState()
-    val currentScreen = MainScreen.valueOf(
-        backStackEntry?.destination?.route ?: MainScreen.Home.name
-    )
+    val currentScreen = MainScreen.entries.firstOrNull { it.name == backStackEntry?.destination?.route }
+        ?: MainScreen.Home
 
     Scaffold(
         topBar = {
@@ -103,12 +106,11 @@ fun MainApp(
             startDestination = MainScreen.Home.name,
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
                 .padding(innerPadding)
         ) {
             composable(route = MainScreen.Home.name) {
                 HomeScreen(
-                    onButtonClicked = { navController.navigate(it) },
+                    onButtonClicked = { navController.navigate(it) { launchSingleTop = true } },
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -116,51 +118,58 @@ fun MainApp(
                 SettingsScreen(modifier = Modifier.fillMaxSize())
             }
 
-            composable(route = MainScreen.Start.name) {
-                val viewModel: FormViewModel = viewModel(factory = FormViewModel.Factory, viewModelStoreOwner = it)
-                val state by viewModel.uiState.collectAsState()
-                val context = LocalContext.current
-                val resources = LocalResources.current
+            navigation(route = MANUFACTURE_GRAPH, startDestination = MainScreen.Start.name) {
+                composable(route = MainScreen.Start.name) {
+                    val viewModel = it.formViewModel(navController)
+                    val state by viewModel.uiState.collectAsState()
+                    val context = LocalContext.current
+                    val resources = LocalResources.current
 
-                LaunchedEffect(viewModel, navController) {
-                    viewModel.effects.collect { effect ->
-                        when (effect) {
-                            FormUiEffect.GotoNextPage -> {
-                                navController.navigate(MainScreen.Form.name)
-                            }
-                            is FormUiEffect.ShowToast -> {
-                                Toast.makeText(
-                                    context,
-                                    resources.getString(effect.messageResId),
-                                    Toast.LENGTH_SHORT,
-                                ).show()
+                    LaunchedEffect(viewModel, navController) {
+                        viewModel.effects.collect { effect ->
+                            when (effect) {
+                                FormUiEffect.GotoNextPage -> {
+                                    navController.navigate(MainScreen.Form.name) { launchSingleTop = true }
+                                }
+                                is FormUiEffect.ShowToast -> {
+                                    Toast.makeText(
+                                        context,
+                                        resources.getString(effect.messageResId),
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
+                                }
                             }
                         }
                     }
-                }
 
-                StartScreen(
-                    state = state,
-                    onQuantityChanged = viewModel::setQuantity,
-                    onExplodeChanged = viewModel::setExplode,
-                    onQueryChanged = viewModel::searchForBom,
-                    onItemSelected = viewModel::setSelectedBom,
-                    onContinue = viewModel::fetchBomDetails,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-            composable(route = MainScreen.Form.name) {
-                val parentEntry = remember(it) { navController.getBackStackEntry(MainScreen.Start.name) }
-                val viewModel: FormViewModel = viewModel(parentEntry)
-                val state by viewModel.uiState.collectAsState()
-                FormScreen(
-                    state = state,
-                    onExpiryChanged = viewModel::setDaysUntilExpiry,
-                    onFinishedChanged = viewModel::setIsFinished,
-                    onSubmit = {},
-                    modifier = Modifier.fillMaxSize()
-                )
+                    StartScreen(
+                        state = state,
+                        onQuantityChanged = viewModel::setQuantity,
+                        onExplodeChanged = viewModel::setExplode,
+                        onQueryChanged = viewModel::searchForBom,
+                        onItemSelected = viewModel::setSelectedBom,
+                        onContinue = viewModel::fetchBomDetails,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+                composable(route = MainScreen.Form.name) {
+                    val viewModel = it.formViewModel(navController)
+                    val state by viewModel.uiState.collectAsState()
+                    FormScreen(
+                        state = state,
+                        onExpiryChanged = viewModel::setDaysUntilExpiry,
+                        onFinishedChanged = viewModel::setIsFinished,
+                        onSubmit = {},
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
             }
         }
     }
+}
+
+@Composable
+private fun NavBackStackEntry.formViewModel(navController: NavController): FormViewModel {
+    val graphEntry = remember(this) { navController.getBackStackEntry(MANUFACTURE_GRAPH) }
+    return viewModel(viewModelStoreOwner = graphEntry, factory = FormViewModel.Factory)
 }
