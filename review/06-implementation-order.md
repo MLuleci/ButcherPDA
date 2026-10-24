@@ -8,6 +8,8 @@ The server work ([04-server-changes.md](04-server-changes.md)) is done. This is 
 
 Section references point to [00-summary.md](00-summary.md) unless another file is named. "§1 #3" means item 3 in the summary's section 1 table.
 
+**Progress:** Phases 0–3 are done. Steps marked *(done)* are committed and pushed. Where the implementation made a decision the plan left open, or differs from it, there's an **Implementation notes** list under the step.
+
 ---
 
 ## Before you start: server *(done)*
@@ -16,31 +18,39 @@ All the server work in [04-server-changes.md](04-server-changes.md) is done and 
 
 ---
 
-## Phase 0: Build and tooling (half a day)
+## Phase 0: Build and tooling (half a day) *(done)*
 
 Get the project building cleanly with tests running, so every later step can be checked.
 
-### Step 0.1: Make the tests compile
+### Step 0.1: Make the tests compile *(done)*
 - Fix `FakeDataSource` / `FakeErpService` / `FakeNetworkErpRepository` against the current interfaces (§1 #10).
 - Add one trivial test, so `./gradlew test` runs green.
 
-### Step 0.2: Tidy the build
+### Step 0.2: Tidy the build *(done)*
 - Remove duplicate and unused catalog entries, e.g. `coil` (01, finding 18).
 - **Don't add the vendor JAR yet** (Phase 5). Until then, the emulator build stays free of native code.
 
-**Done when:** `./gradlew assembleDebug test` passes.
+**Implementation notes:**
+- Also done from finding 18: the serialization plugin version now comes from the catalog, `ui-text` follows the Compose BOM, and the obsolete `composeOptions` block is gone.
+- Not done (optional in finding 18): switching to Retrofit's own kotlinx converter, dropping `appcompat`/`material` by changing the theme, and raising the Gradle memory settings.
+
+**Done when:** `./gradlew assembleDebug test` passes. *Confirmed.*
 
 ---
 
-## Phase 1: Data and network layer (1–2 days)
+## Phase 1: Data and network layer (1–2 days) *(done)*
 
 Make the app talk correctly to the server you've just changed. Nothing visible changes yet, but this is where most of the "would fail against the real server" bugs are.
 
-### Step 1.1: Number helpers
+### Step 1.1: Number helpers *(done)*
 - `parseDecimal`, `formatDecimal`, `roundForErp` and `validateQuantity(text, wholeNumber)` in one file (2.9, 2.12 point 6, 2.13 part 1).
 - Unit tests for all four. These are the first real tests (2.13 part 7).
 
-### Step 1.2: Models
+**Implementation notes:**
+- The file is `util/Decimal.kt`.
+- `formatDecimal` returns `"0"` for zero itself: Android 6's `BigDecimal.stripTrailingZeros()` leaves zero as `0.000`, unlike the JVM the tests run on.
+
+### Step 1.2: Models *(done)*
 - **`Float` → `Double`** for all quantities (01, finding 14).
 - **New and changed fields:**
   - `BomSearchResultItem`: `shelfLife`, `wholeNumber: Int` with `isWholeNumber`, and an `isDefaultBom` getter.
@@ -51,7 +61,12 @@ Make the app talk correctly to the server you've just changed. Nothing visible c
 - **Lenient decoding:** `Json { ignoreUnknownKeys = true }` (01, finding 7).
 - **Decoding tests:** paste real responses from your server into them (01, finding 16).
 
-### Step 1.3: `ErpService` and `NetworkErpRepository`
+**Implementation notes:**
+- `ManufactureEntry.name` is now `stockEntryId`, mapped with `@SerialName("name")`, since that's the key the server sends.
+- One shared `erpJson` instance (`network/ErpJson.kt`) is used by Retrofit and the tests.
+- The decoding tests use responses captured from the dev server. The `create_manufacture_entry` one was taken by repeating an existing `request_id`, so nothing new was created.
+
+### Step 1.3: `ErpService` and `NetworkErpRepository` *(done)*
 - **BOM search:**
   - Build the filters and `fields` with `buildJsonArray`, including both link fields (`item.shelf_life_in_days`, `uom.must_be_whole_number`). Drop `encoded = true` (§1 #9, 2.10, 2.13 part 3).
   - Filter on `docstatus = 1`.
@@ -63,7 +78,14 @@ Make the app talk correctly to the server you've just changed. Nothing visible c
   - A `SerializationException` becomes "Unexpected response from the server" (2.14 part 5).
 - **Tests:** MockWebServer tests for each call (01, finding 16).
 
-### Step 1.4: Interceptor and settings
+**Implementation notes:**
+- **Page limit:** the BOM search asks for a fixed 50 rows (`BOM_SEARCH_LIMIT`) instead of paging, since a search only lists matching BOMs and there are few of them. The sort stays `item_name desc` (still an open question in 01).
+- **LIKE escaping:** `\`, `%` and `_` in the query are escaped. Confirmed against the dev server.
+- **Errors:** `ErpError` (`network/ErpError.kt`) is a sealed exception with `Network`, `UnexpectedResponse`, `Unauthorized` (401), `Forbidden` (403) and `Http` (anything else, with the server's message). Step 1.4 added `NotConfigured`. `isOutcomeUnknown` (network failure or 5xx) is for the submit message in Step 5.1.
+- **Retrofit setup:** `createErpService(baseUrl, client)` builds the service for both the app and the tests.
+- **Tests:** they use `mockwebserver3` at the OkHttp version, and the error bodies are real 401 / 403 / 404 / 417 responses from the dev server.
+
+### Step 1.4: Interceptor and settings *(done)*
 - **Interceptor:**
   - Add `Accept-Language: bg` (2.12 point 1).
   - Trim the key, and fail early if it's empty (01, finding 10). It stays one field, `api_key:api_secret`, validated for one `:` with text on both sides.
@@ -76,25 +98,42 @@ Make the app talk correctly to the server you've just changed. Nothing visible c
   - Set `usesCleartextTraffic="false"` explicitly (2.5).
   - Exclude the settings DataStore from backups (01, finding 9).
 
-### Step 1.5: Switch to the real repository
+**Implementation notes:**
+- **Language:** `Accept-Language` is `bg` when the device is in Bulgarian and `en` otherwise.
+- **Interceptor:** it takes a `Flow<PdaSettings>`, which makes it testable without DataStore. Invalid settings throw `InvalidSettingsException` before anything is sent, and the UI shows that as `ErpError.NotConfigured` ("…missing or invalid. Check them in Settings.").
+- **Validators:** `normaliseBaseUrl` and `normaliseApiKey` live in `SettingsRepository.kt`. Settings saves the normalised values.
+- **Backup:** `allowBackup` stays `true`. `datastore/` is excluded in both `backup_rules.xml` (API 23–30) and `data_extraction_rules.xml` (API 31+).
+- **Default URL:** `PdaSettings.baseUrl` now defaults to `""` (01, finding 20).
+
+### Step 1.5: Switch to the real repository *(done)*
 - `DefaultAppContainer` uses `NetworkErpRepository`. Keep the fake for debug builds or the emulator (01, finding 13), e.g. a `BuildConfig` flag or a Settings toggle.
 - **Update `FakeErpRepository` to match the new models:** shelf life, whole-number ingredients in `Nos`, a tolerance, and real-looking dates. Also fix its quirks (01, finding 22).
 
-**Done when:** on the device, against the dev server, a BOM search returns shelf life and the whole-number flag, and the fake still works on the emulator.
+**Implementation notes:**
+- **Switch:** a Gradle property, `useFakeErp`, sets `BuildConfig.USE_FAKE_ERP` in debug builds. Release builds always use the network. Set `useFakeErp=true` in `gradle.properties` (or pass `-PuseFakeErp=true`) for the emulator. **Debug builds use the real server by default**, so they need valid Settings.
+- **The fake:** it now has a fixed catalogue (5 BOMs, including the server's meatball recipe, and 15 raw-material batches). It mirrors the server's main checks: 404 for an unknown batch, 417 for a fractional whole-number quantity or mismatched items, and the original entry for a repeated `request_id`. Search only matches BOM names, so arbitrary text gives "No results".
+- **Start-up:** the certificate store and OkHttp client are `lazy`, so fake builds don't read the PEM files at start-up (01, finding 13).
+
+**Done when:** on the device, against the dev server, a BOM search returns shelf life and the whole-number flag, and the fake still works on the emulator. *The build and tests are confirmed; the device check against the dev server hasn't been reported yet.*
 
 ---
 
-## Phase 2: Navigation and state structure (1 day)
+## Phase 2: Navigation and state structure (1 day) *(done)*
 
 Fix the crashes and set up the structure the new flow needs.
 
-### Step 2.1: Navigation
+### Step 2.1: Navigation *(done)*
 - **Remove `verticalScroll` from the `NavHost`.** Each screen scrolls itself (§1 #6).
 - **Nested `manufacture` graph** (Start, Form, Summary) with one shared `formViewModel(...)` helper (§1 #5, 2.8).
 - **Hide the Search button** on Home until Phase 6 (§1 #2).
 - **`launchSingleTop`** on navigations (02, finding 8).
 
-### Step 2.2: `FormViewModel` state
+**Implementation notes:**
+- **Graph contents:** the `manufacture` graph (`MANUFACTURE_GRAPH`) holds Start and Form only. Summary is added with its screen in Step 5.1, rather than as an empty placeholder.
+- **Titles:** the top-bar title uses `MainScreen.entries.firstOrNull { … } ?: Home`, so a graph route can't crash `valueOf` (02, finding 17).
+- **Scrolling:** Start and Settings scroll themselves, and Form's table is the one scrolling list.
+
+### Step 2.2: `FormViewModel` state *(done)*
 - **Saved state:**
   - Stop saving the whole `FormUiState`. Save only inputs as strings, plus the batches as JSON (§1 #3, 2.6).
   - On Form with no BOM loaded, re-fetch.
@@ -108,17 +147,29 @@ Fix the crashes and set up the structure the new flow needs.
 - **Batch changes:** replace `require(...)` with returned errors (02, finding 9).
 - **Factory:** `FormViewModel.Factory` stays as it is. The tolerance now comes from `BomDetails`, so no settings are needed.
 
-### Step 2.3: Pure state functions and tests
+**Implementation notes:**
+- **Saved state:** the selected BOM is saved as JSON (the whole `BomSearchResultItem`, which keeps its shelf life and whole-number flag), alongside the inputs and the batches.
+- **`requestId`:** it's a UUID, renewed whenever BOM, quantity or explode actually change, not only the BOM. An edited run can't look like a repeat of an earlier submission.
+- **`printState`:** it's `NetworkState<Unit, Throwable>` until the printer's error type exists (Phase 6).
+- **Batch errors:** `BatchChangeError` only has `INVALID_INPUT` and `NOT_FOUND` for now. Step 4.3 adds the duplicate and not-in-recipe checks.
+- **Restore:** `reloadBomDetails()` re-fetches on Form after a restore and sends no effects. If there's nothing to reload, Form pops back to Start instead of showing a spinner forever. Its error state has a Retry button (02, finding 12).
+- **Tests:** the setters' clearing rules are tested here, in `FormViewModelTest`, rather than in Step 2.3.
+
+### Step 2.3: Pure state functions and tests *(done)*
 - `canContinue`, `allowedRange` (with ±0.5 for whole-number units), `coverage`, `canSubmit`, `wholeNumberChoices` (starting at 1) and `unworkableIngredients` (2.2, 2.13 parts 4–5).
 - Unit tests for them, and for the setters' clearing rules.
 
-**Done when:** rotating the screen or backgrounding the app on any screen doesn't crash, and Back from Form, then a different BOM, gives an empty batch list.
+**Implementation notes:**
+- **Location:** the rules are extensions on `FormUiState` in `ui/screens/FormRules.kt`.
+- **Extra rule:** `canFetch` (a BOM, and a quantity valid for its whole-number flag) is what the BOM details request needs. `canContinue` is `canFetch` plus valid expiry days. `canSubmit` also needs valid expiry days.
+
+**Done when:** rotating the screen or backgrounding the app on any screen doesn't crash, and Back from Form, then a different BOM, gives an empty batch list. *Backgrounding confirmed on the device. The empty batch list is covered by `FormViewModelTest`, but can't be seen in the app until batches can be added (Phase 4).*
 
 ---
 
-## Phase 3: Start and Form screens (2 days)
+## Phase 3: Start and Form screens (2 days) *(done)*
 
-### Step 3.1: Start screen
+### Step 3.1: Start screen *(done)*
 - **Add the moved fields:** expiry (with the shelf-life prefill and the "Default from product" hint) and "Is finished" (2.10).
 - **Quantity:**
   - Whole-number validation and keyboard via the new `QuantityInput(…, wholeNumber)` (2.13 parts 2–3).
@@ -128,7 +179,15 @@ Fix the crashes and set up the structure the new flow needs.
 - **Split `StartScreen.kt`** into smaller files while you're in there (03, finding 14).
 - **Fix the selected-row colours** (03, finding 4).
 
-### Step 3.2: Form screen and ingredient table
+**Implementation notes:**
+- **Layout:** Continue stays at the bottom, outside the scrolling fields (2.10 point 5).
+- **Too-small runs:** the "quantity is too small" message appears under the quantity field through a new `QuantityInput(extraError = …)`. The ViewModel doesn't navigate when `unworkableIngredients` isn't empty, whether the BOM details were just fetched or already loaded.
+- **Expiry field:** its own fixes (03, finding 6) were done while moving it: whole days only, a number keyboard, the `days` string, and calendar-day arithmetic.
+- **Files:** the BOM picker moved to `components/BomSelect.kt` (`BomSelect`, `BomSearch`, `BomResultRow`). The Cancel/Select pair is the shared `components/ConfirmCancelButtons.kt`.
+- **Selected BOM:** shown in a bordered card with the name, BOM ID and unit.
+- **Batch dialog:** still passes `wholeNumber = false` to `QuantityInput` until Step 4.2.
+
+### Step 3.2: Form screen and ingredient table *(done)*
 - **Form layout:** batches only. Show the run settings in a read-only header (2.10).
 - **`IngredientTable`:**
   - Fix the `String.format` crash (§1 #1).
@@ -137,7 +196,13 @@ Fix the crashes and set up the structure the new flow needs.
 - **Submit button:** enabled by `canSubmit`.
 - **Formatting:** use `formatDecimal` everywhere numbers are shown (2.9).
 
-### Step 3.3: Strings
+**Implementation notes:**
+- **Table input:** `IngredientTable` takes a list of `IngredientLine`s, which `FormUiState.ingredientLines(bom)` builds from the rules. Batch rows take a numeric `BatchRow`, and `BatchInfo` stays for the dialog only.
+- **Duplicate keys:** the server builds the ingredient list with `get_bom_items_as_dict` (keyed by item code), so an item can't appear twice. The real clash was the batch-row keys, which are now prefixed (`item|`, `none|`, `batch|<item>|<batch>`).
+- **Colours:** amber and green are hard-coded for now (see Phase 7).
+- **Not done yet:** the + button's touch target is Step 4.1, and the batch dialog isn't opened from Form until Phase 4.
+
+### Step 3.3: Strings *(done)*
 - **Fix the Bulgarian terms:**
   - `bom_label` = "СНМ", in Cyrillic letters.
   - `explode_label` = "Разгръщане".
@@ -145,7 +210,13 @@ Fix the crashes and set up the structure the new flow needs.
 - **Move hard-coded strings** into resources, and use format arguments instead of concatenation (03, finding 9).
 - **Add the new messages:** whole number required, not in recipe, already added, not a batch label, scan ignored while editing, printer not ready, and the submit-unknown message.
 
-**Done when:** with the fakes, you can pick a BOM, see the expiry filled in, continue, and see the ingredient table with correct totals and colours.
+**Implementation notes:**
+- **Also fixed:** `invalid_batch_no` gets its full stop.
+- **Format strings:** Form's BOM line uses `bom_line`, and quantities with units use `quantity_with_unit`.
+- **Retry icon:** in `ErrorMessage` it has no description, because the button text already says Retry.
+- **New messages:** they aren't used yet. Phases 4–6 use them.
+
+**Done when:** with the fakes, you can pick a BOM, see the expiry filled in, continue, and see the ingredient table with correct totals and colours. *Not checked on the emulator yet.*
 
 ---
 
@@ -179,6 +250,7 @@ The core of the app. It's still driven by manual entry here; scanning plugs in d
 
 ### Step 4.3: `upsertBatch` / `removeBatch`
 - Return errors instead of crashing. Reject duplicates and items that aren't in the recipe here too (2.3).
+- *Partly done in Step 2.2:* both already return a `BatchChangeError?` instead of throwing. What's left is adding the duplicate (add mode only) and not-in-recipe checks.
 
 **Done when:** with the fake repository, you can add, edit and remove batches by typing. Duplicates, unknown batches, wrong items and fractional Nos quantities are all rejected under the right field, and Submit enables only when every ingredient is in range.
 
@@ -188,7 +260,8 @@ The core of the app. It's still driven by manual entry here; scanning plugs in d
 
 ### Step 5.1: Submit and Summary
 - **Submit:** send with `requestId`. A 500 or network failure shows "Couldn't confirm the submission. Retry to check.", and Retry re-sends the same `requestId` (2.12 point 4).
-- **Summary screen:** shows the entry. Navigating to it replaces Form, so Back can't reach the submitted form (2.8).
+- **Summary screen:** shows the entry. Navigating to it replaces Form, so Back can't reach the submitted form (2.8). Add its `composable` to the `manufacture` graph, which holds only Start and Form so far (Step 2.1).
+- **Effects on Form:** only the Start route collects `FormViewModel.effects` today, so submit's success and failure effects need a collector on Form too (02, finding 11).
 - **"Same BOM again"** calls `startAgain()` (new `requestId`, batches cleared) and pops back to Start.
 - **Done / Back** leaves the graph.
 - **Print button:** add it now with `FakeLabelPrinter`. It logs what it would print (2.11 part 4).
