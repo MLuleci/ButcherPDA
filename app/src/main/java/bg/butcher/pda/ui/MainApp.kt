@@ -39,6 +39,7 @@ import bg.butcher.pda.ui.screens.FormUiEffect
 import bg.butcher.pda.ui.screens.HomeScreen
 import bg.butcher.pda.ui.screens.StartScreen
 import bg.butcher.pda.ui.screens.SettingsScreen
+import bg.butcher.pda.ui.screens.canFetch
 
 // Nested graph for the manufacturing flow; its screens share one FormViewModel
 const val MANUFACTURE_GRAPH = "manufacture"
@@ -156,7 +157,7 @@ fun MainApp(
                     val viewModel = it.formViewModel(navController)
                     val state by viewModel.uiState.collectAsState()
                     LaunchedEffect(viewModel) {
-                        if (state.canContinue) viewModel.reloadBomDetails() else navController.popBackStack()
+                        if (state.canFetch) viewModel.reloadBomDetails() else navController.popBackStack()
                     }
                     FormScreen(
                         state = state,

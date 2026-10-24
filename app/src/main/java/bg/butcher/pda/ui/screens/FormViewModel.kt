@@ -74,11 +74,8 @@ data class FormUiState(
     val quantity: Double?
         get() = parseDecimal(quantityText)?.takeIf { it > 0.0 }
 
-    val canContinue: Boolean
-        get() = quantity != null && selectedItem != null
-
     val expiryDays: Int?
-        get() = expiryDaysText.toIntOrNull()?.takeIf { it > 0 }
+        get() = expiryDaysText.trim().toIntOrNull()?.takeIf { it > 0 }
 }
 
 fun newRequestId(): String = UUID.randomUUID().toString()
@@ -170,7 +167,7 @@ class FormViewModel(private val erpRepository: ErpRepository, private val saved:
             _effects.trySend(FormUiEffect.GotoNextPage)
             return
         }
-        if (state.quantity == null || state.selectedItem == null) {
+        if (!state.canFetch) {
             _effects.trySend(FormUiEffect.ShowToast(R.string.incomplete_message))
             return
         }

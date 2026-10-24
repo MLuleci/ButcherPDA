@@ -260,7 +260,7 @@ fun StartScreen(
         SubmitButton(
             label = stringResource(R.string.continue_label),
             onClick = onContinue,
-            enabled = state.canContinue,
+            enabled = state.canFetch,
             isLoading = state.fetchState is NetworkState.Loading,
             modifier = Modifier.align(Alignment.CenterHorizontally)
         )
