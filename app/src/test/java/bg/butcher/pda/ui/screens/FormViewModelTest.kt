@@ -8,7 +8,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -55,11 +54,16 @@ class FormViewModelTest {
 
     private fun viewModel(saved: SavedStateHandle = SavedStateHandle()) = FormViewModel(FakeErpRepository(), saved)
 
-    private fun FormViewModel.withBatch(): FormViewModel {
+    private fun FormViewModel.loaded(): FormViewModel {
         setSelectedBom(meatballs)
         setQuantity("25")
-        upsertBatch("BEEF", "BEEF.0001", 1.0)
+        fetchBomDetails()
+        dispatcher.scheduler.advanceUntilIdle()
         return this
+    }
+
+    private fun FormViewModel.withBatch(): FormViewModel = loaded().apply {
+        addBatch("BEEF", "BEEF.0001", 1.0)
     }
 
     @Test
@@ -233,47 +237,38 @@ class FormViewModelTest {
         assertEquals(1, restored.uiState.value.items.size)
     }
 
-    private fun TestScope.loadedViewModel(): FormViewModel {
-        val vm = viewModel()
-        vm.setSelectedBom(meatballs)
-        vm.setQuantity("25")
-        vm.fetchBomDetails()
-        advanceUntilIdle()
-        return vm
-    }
-
     @Test
     fun lookup_matchesIngredientAndPrefillsWhatIsLeft() = runTest(dispatcher) {
-        val vm = loadedViewModel()
+        val vm = viewModel().loaded()
 
         val first = vm.lookupBatch(" beef.0001 ") as NetworkState.Success
         assertEquals("BEEF.0001", first.data.batch.name)
         assertEquals("BEEF", first.data.ingredient.itemCode)
         assertEquals(1.0, first.data.prefill!!, 1e-9)
 
-        vm.upsertBatch("BEEF", "BEEF.0001", 0.4)
+        vm.addBatch("BEEF", "BEEF.0001", 0.4)
         val second = vm.lookupBatch("BEEF.0002") as NetworkState.Success
         assertEquals(0.6, second.data.prefill!!, 1e-9)
     }
 
     @Test
     fun lookup_rejectsBatchAlreadyAdded() = runTest(dispatcher) {
-        val vm = loadedViewModel()
-        vm.upsertBatch("BEEF", "BEEF.0001", 0.4)
+        val vm = viewModel().loaded()
+        vm.addBatch("BEEF", "BEEF.0001", 0.4)
 
         assertEquals(NetworkState.Error(BatchLookupError.AlreadyAdded), vm.lookupBatch("beef.0001"))
     }
 
     @Test
     fun lookup_rejectsUnknownBatch() = runTest(dispatcher) {
-        val vm = loadedViewModel()
+        val vm = viewModel().loaded()
 
         assertEquals(NetworkState.Error(BatchLookupError.NotFound), vm.lookupBatch("NOPE.0001"))
     }
 
     @Test
     fun lookup_rejectsBatchNotInRecipe() = runTest(dispatcher) {
-        val vm = loadedViewModel()
+        val vm = viewModel().loaded()
 
         val result = vm.lookupBatch("PORK.0001") as NetworkState.Error
         val error = result.error as BatchLookupError.NotInRecipe
@@ -281,17 +276,49 @@ class FormViewModelTest {
     }
 
     @Test
-    fun upsertAndRemoveBatch_returnErrorsInsteadOfThrowing() {
-        val vm = viewModel()
+    fun batchChanges_returnErrorsInsteadOfThrowing() {
+        val vm = viewModel().loaded()
 
-        assertEquals(BatchChangeError.INVALID_INPUT, vm.upsertBatch("", "B1", 1.0))
-        assertEquals(BatchChangeError.INVALID_INPUT, vm.upsertBatch("BEEF", "", 1.0))
-        assertEquals(BatchChangeError.INVALID_INPUT, vm.upsertBatch("BEEF", "B1", 0.0))
-        assertEquals(BatchChangeError.INVALID_INPUT, vm.upsertBatch("BEEF", "B1", Double.POSITIVE_INFINITY))
+        assertEquals(BatchChangeError.INVALID_INPUT, vm.addBatch("", "B1", 1.0))
+        assertEquals(BatchChangeError.INVALID_INPUT, vm.addBatch("BEEF", "", 1.0))
+        assertEquals(BatchChangeError.INVALID_INPUT, vm.addBatch("BEEF", "B1", 0.0))
+        assertEquals(BatchChangeError.INVALID_INPUT, vm.addBatch("BEEF", "B1", Double.POSITIVE_INFINITY))
+        assertEquals(BatchChangeError.NOT_FOUND, vm.updateBatch("BEEF", "B1", 1.0))
         assertEquals(BatchChangeError.NOT_FOUND, vm.removeBatch("BEEF", "B1"))
 
-        assertNull(vm.upsertBatch("BEEF", "B1", 1.0))
+        assertNull(vm.addBatch("BEEF", "B1", 1.0))
         assertNull(vm.removeBatch("BEEF", "B1"))
         assertTrue(vm.uiState.value.items.isEmpty())
+    }
+
+    @Test
+    fun addBatch_rejectsDuplicates() {
+        val vm = viewModel().withBatch()
+
+        assertEquals(BatchChangeError.ALREADY_ADDED, vm.addBatch("BEEF", "beef.0001", 0.5))
+        assertEquals(mapOf("BEEF" to mapOf("BEEF.0001" to 1.0)), vm.uiState.value.items)
+    }
+
+    @Test
+    fun addBatch_rejectsItemsNotInRecipe() {
+        assertEquals(BatchChangeError.NOT_IN_RECIPE, viewModel().addBatch("BEEF", "BEEF.0001", 1.0))
+        assertEquals(BatchChangeError.NOT_IN_RECIPE, viewModel().loaded().addBatch("PORK", "PORK.0001", 1.0))
+    }
+
+    @Test
+    fun addBatch_rejectsFractionsForWholeNumberIngredients() {
+        val vm = viewModel().loaded()
+
+        assertEquals(BatchChangeError.INVALID_INPUT, vm.addBatch("ONION", "ONION.0001", 2.5))
+        assertNull(vm.addBatch("ONION", "ONION.0001", 3.0))
+    }
+
+    @Test
+    fun updateBatch_changesQuantityOnly() {
+        val vm = viewModel().withBatch()
+
+        assertNull(vm.updateBatch("BEEF", "BEEF.0001", 0.8))
+
+        assertEquals(mapOf("BEEF" to mapOf("BEEF.0001" to 0.8)), vm.uiState.value.items)
     }
 }

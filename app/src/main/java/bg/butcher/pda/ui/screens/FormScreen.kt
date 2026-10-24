@@ -73,7 +73,8 @@ fun FormScreen(
     dialog: BatchDialogState?,
     onDialogChange: (BatchDialogState?) -> Unit,
     lookupBatch: suspend (String) -> NetworkState<BatchMatch, BatchLookupError>,
-    onUpsertBatch: (itemCode: String, batchNumber: String, quantity: Double) -> BatchChangeError?,
+    onAddBatch: (itemCode: String, batchNumber: String, quantity: Double) -> BatchChangeError?,
+    onUpdateBatch: (itemCode: String, batchNumber: String, quantity: Double) -> BatchChangeError?,
     onRemoveBatch: (itemCode: String, batchNumber: String) -> Unit,
     onSubmit: () -> Unit,
     onRetry: () -> Unit,
@@ -127,7 +128,8 @@ fun FormScreen(
                         onBatchNumberChange = { onDialogChange(BatchDialogState.Adding(BatchInput(it))) },
                         lookupBatch = lookupBatch,
                         onSubmit = { itemCode, batchNumber, quantity ->
-                            if (onUpsertBatch(itemCode, batchNumber, quantity) == null) onDialogChange(null)
+                            val save = if (dialog is BatchDialogState.Editing) onUpdateBatch else onAddBatch
+                            if (save(itemCode, batchNumber, quantity) == null) onDialogChange(null)
                         },
                         onDismiss = { onDialogChange(null) },
                     )
@@ -180,7 +182,8 @@ fun FormScreen_Preview() {
             dialog = null,
             onDialogChange = {},
             lookupBatch = { NetworkState.Idle },
-            onUpsertBatch = { _, _, _ -> null },
+            onAddBatch = { _, _, _ -> null },
+            onUpdateBatch = { _, _, _ -> null },
             onRemoveBatch = { _, _ -> },
             onSubmit = {},
             onRetry = {},

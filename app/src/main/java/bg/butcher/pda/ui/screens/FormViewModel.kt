@@ -57,6 +57,8 @@ data class BatchMatch(
 enum class BatchChangeError {
     INVALID_INPUT,
     NOT_FOUND,
+    ALREADY_ADDED,
+    NOT_IN_RECIPE,
 }
 
 typealias BatchMap = Map<String, Map<String, Double>>
@@ -264,14 +266,34 @@ class FormViewModel(private val erpRepository: ErpRepository, private val saved:
         updateInputs { it.copy(isFinished = isFinished) }
     }
 
-    fun upsertBatch(itemCode: String, batchNumber: String, quantity: Double): BatchChangeError? {
+    private fun checkBatch(itemCode: String, batchNumber: String, quantity: Double): BatchChangeError? {
         if (itemCode.isEmpty() || batchNumber.isEmpty() || !quantity.isFinite() || quantity <= 0.0) {
             return BatchChangeError.INVALID_INPUT
         }
+        val ingredient = _uiState.value.bom?.items?.firstOrNull { it.itemCode == itemCode }
+            ?: return BatchChangeError.NOT_IN_RECIPE
+        if (ingredient.wholeNumber && quantity % 1.0 != 0.0) return BatchChangeError.INVALID_INPUT
+        return null
+    }
+
+    private fun putBatch(itemCode: String, batchNumber: String, quantity: Double) {
         updateInputs { state ->
             val batches = state.items[itemCode].orEmpty() + (batchNumber to quantity)
             state.copy(items = state.items + (itemCode to batches))
         }
+    }
+
+    fun addBatch(itemCode: String, batchNumber: String, quantity: Double): BatchChangeError? {
+        checkBatch(itemCode, batchNumber, quantity)?.let { return it }
+        if (_uiState.value.hasBatch(batchNumber)) return BatchChangeError.ALREADY_ADDED
+        putBatch(itemCode, batchNumber, quantity)
+        return null
+    }
+
+    fun updateBatch(itemCode: String, batchNumber: String, quantity: Double): BatchChangeError? {
+        checkBatch(itemCode, batchNumber, quantity)?.let { return it }
+        if (_uiState.value.items[itemCode]?.containsKey(batchNumber) != true) return BatchChangeError.NOT_FOUND
+        putBatch(itemCode, batchNumber, quantity)
         return null
     }
 
