@@ -33,4 +33,7 @@
     <string name="incomplete_message">Please fill in the required fields.</string>
     <string name="finished_label">Is finished</string>
     <string name="network_error">Network error</string>
+    <string name="unauthorized_error">The server rejected the API key. Check it in Settings.</string>
+    <string name="forbidden_error">This device isn\'t allowed to do that. Ask an administrator to check its PDA User role.</string>
+    <string name="unexpected_response_error">Unexpected response from the server.</string>
 </resources>

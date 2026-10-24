@@ -30,7 +30,8 @@ class FakeNetworkErpRepository : ErpRepository {
         items: Map<String, Map<String, Double>>,
         expiryDate: LocalDate,
         explode: Boolean,
-        isFinished: Boolean
+        isFinished: Boolean,
+        requestId: String,
     ): Result<ManufactureEntry> {
         return Result.success(FakeDataSource.manufactureEntry)
     }

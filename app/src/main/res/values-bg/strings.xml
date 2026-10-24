@@ -34,4 +34,7 @@
     <string name="incomplete_message">Моля, попълнете задължителните полета.</string>
     <string name="finished_label">Завършено</string>
     <string name="network_error">Мрежова грешка</string>
+    <string name="unauthorized_error">Сървърът отхвърли API ключа. Проверете го в Настройки.</string>
+    <string name="forbidden_error">Това устройство няма право да прави това. Помолете администратор да провери ролята му PDA User.</string>
+    <string name="unexpected_response_error">Неочакван отговор от сървъра.</string>
 </resources>

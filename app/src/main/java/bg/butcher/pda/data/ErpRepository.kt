@@ -5,7 +5,6 @@ import bg.butcher.pda.model.BomDetails
 import bg.butcher.pda.model.BomSearchResultItem
 import bg.butcher.pda.model.ManufactureEntry
 import kotlinx.datetime.LocalDate
-import java.util.Date
 
 interface ErpRepository {
     suspend fun searchBom(query: String): Result<List<BomSearchResultItem>>
@@ -25,5 +24,6 @@ interface ErpRepository {
         expiryDate: LocalDate,
         explode: Boolean = false,
         isFinished: Boolean = true,
+        requestId: String,
     ): Result<ManufactureEntry>
 }

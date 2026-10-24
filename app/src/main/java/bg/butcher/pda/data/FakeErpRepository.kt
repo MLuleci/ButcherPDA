@@ -135,7 +135,8 @@ class FakeErpRepository(
         items: Map<String, Map<String, Double>>,
         expiryDate: LocalDate,
         explode: Boolean,
-        isFinished: Boolean
+        isFinished: Boolean,
+        requestId: String,
     ): Result<ManufactureEntry> {
         delay(latency)
         return withFailure {

@@ -5,22 +5,26 @@ import bg.butcher.pda.model.BomDetails
 import bg.butcher.pda.model.BomSearchResultItem
 import bg.butcher.pda.model.DataWrapper
 import bg.butcher.pda.model.ManufactureEntry
+import bg.butcher.pda.model.ManufactureEntryRequest
 import bg.butcher.pda.model.MessageWrapper
-import kotlinx.datetime.LocalDate
+import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import retrofit2.Retrofit
+import retrofit2.http.Body
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
 import retrofit2.http.GET
 import retrofit2.http.POST
-import retrofit2.http.QueryMap
 import retrofit2.http.Path
-import java.util.Date
+import retrofit2.http.QueryMap
 
 interface ErpService {
     @GET("/api/resource/BOM")
-    suspend fun seachBom(@QueryMap(encoded = true) options: Map<String, String>): DataWrapper<List<BomSearchResultItem>>
+    suspend fun searchBom(@QueryMap options: Map<String, String>): DataWrapper<List<BomSearchResultItem>>
 
     @GET("/api/resource/Batch/{id}")
-    suspend fun getBatch(@Path("id") batchNumber: String, @QueryMap options: Map<String, String>): BatchDetails
+    suspend fun getBatch(@Path("id") batchNumber: String): DataWrapper<BatchDetails>
 
     @FormUrlEncoded
     @POST("/api/method/my_app.my_app.api.get_bom_details")
@@ -30,14 +34,13 @@ interface ErpService {
         @Field("explode") explode: Boolean = false,
     ): MessageWrapper<BomDetails>
 
-    @FormUrlEncoded
     @POST("/api/method/my_app.my_app.api.create_manufacture_entry")
-    suspend fun createManufactureEntry(
-        @Field("bom") bom: String,
-        @Field("qty") quantity: Double,
-        @Field("items") items: Map<String, Map<String, Double>>,
-        @Field("expiry_date") expiryDate: LocalDate,
-        @Field("explode") explode: Boolean = false,
-        @Field("is_finished") isFinished: Boolean = true,
-    ): ManufactureEntry
+    suspend fun createManufactureEntry(@Body request: ManufactureEntryRequest): MessageWrapper<ManufactureEntry>
 }
+
+fun createErpService(baseUrl: String, client: OkHttpClient): ErpService = Retrofit.Builder()
+    .addConverterFactory(erpJson.asConverterFactory("application/json".toMediaType()))
+    .baseUrl(baseUrl)
+    .client(client)
+    .build()
+    .create(ErpService::class.java)

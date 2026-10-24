@@ -15,10 +15,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import bg.butcher.pda.R
+import bg.butcher.pda.network.ErpError
 
 @Composable
 fun ErrorMessage(
     modifier: Modifier = Modifier,
+    error: ErpError? = null,
     onRetry: (() -> Unit)? = null,
 ) {
     Column(
@@ -27,7 +29,7 @@ fun ErrorMessage(
         modifier = modifier,
     ) {
         Text(
-            text = stringResource(R.string.error_message),
+            text = errorText(error),
             color = MaterialTheme.colorScheme.error
         )
         if (onRetry != null) {

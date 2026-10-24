@@ -5,20 +5,17 @@ import bg.butcher.pda.model.BomDetails
 import bg.butcher.pda.model.BomSearchResultItem
 import bg.butcher.pda.model.DataWrapper
 import bg.butcher.pda.model.ManufactureEntry
+import bg.butcher.pda.model.ManufactureEntryRequest
 import bg.butcher.pda.model.MessageWrapper
 import bg.butcher.pda.network.ErpService
-import kotlinx.datetime.LocalDate
 
 class FakeErpService: ErpService {
-    override suspend fun seachBom(options: Map<String, String>): DataWrapper<List<BomSearchResultItem>> {
+    override suspend fun searchBom(options: Map<String, String>): DataWrapper<List<BomSearchResultItem>> {
         return DataWrapper(FakeDataSource.bomSearchResult)
     }
 
-    override suspend fun getBatch(
-        batchNumber: String,
-        options: Map<String, String>
-    ): BatchDetails {
-        return FakeDataSource.batchDetails
+    override suspend fun getBatch(batchNumber: String): DataWrapper<BatchDetails> {
+        return DataWrapper(FakeDataSource.batchDetails)
     }
 
     override suspend fun getBomDetails(
@@ -29,14 +26,7 @@ class FakeErpService: ErpService {
         return MessageWrapper(FakeDataSource.bomDetails)
     }
 
-    override suspend fun createManufactureEntry(
-        bom: String,
-        quantity: Double,
-        items: Map<String, Map<String, Double>>,
-        expiryDate: LocalDate,
-        explode: Boolean,
-        isFinished: Boolean
-    ): ManufactureEntry {
-        return FakeDataSource.manufactureEntry
+    override suspend fun createManufactureEntry(request: ManufactureEntryRequest): MessageWrapper<ManufactureEntry> {
+        return MessageWrapper(FakeDataSource.manufactureEntry)
     }
 }

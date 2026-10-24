@@ -48,6 +48,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import bg.butcher.pda.R
 import bg.butcher.pda.model.BomSearchResultItem
+import bg.butcher.pda.network.ErpError
 import bg.butcher.pda.network.NetworkState
 import bg.butcher.pda.ui.components.ErrorMessage
 import bg.butcher.pda.ui.components.QuantityInput
@@ -61,7 +62,7 @@ import kotlinx.coroutines.launch
 fun BomSearch(
     onQueryChanged: (String) -> Unit,
     onSelect: (BomSearchResultItem?) -> Unit,
-    searchState: NetworkState<List<BomSearchResultItem>, String?>,
+    searchState: NetworkState<List<BomSearchResultItem>, ErpError>,
     modifier: Modifier = Modifier,
 ) {
     val state = rememberTextFieldState()
@@ -81,7 +82,7 @@ fun BomSearch(
             modifier = Modifier.heightIn(minHeight, 500.dp).fillMaxWidth()
         ) {
             when (searchState) {
-                is NetworkState.Error -> ErrorMessage(onRetry = { onQueryChanged(query) })
+                is NetworkState.Error -> ErrorMessage(error = searchState.error, onRetry = { onQueryChanged(query) })
                 is NetworkState.Loading -> CircularProgressIndicator()
                 is NetworkState.Success -> {
                     if (searchState.data.isEmpty()) {
@@ -177,7 +178,7 @@ fun BomSelect(
     onQueryChanged: (String) -> Unit,
     onItemSelected: (BomSearchResultItem) -> Unit,
     selectedItem: BomSearchResultItem?,
-    searchState: NetworkState<List<BomSearchResultItem>, String?>,
+    searchState: NetworkState<List<BomSearchResultItem>, ErpError>,
     modifier: Modifier = Modifier,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -353,7 +354,7 @@ fun BomSearch_Error_Preview() {
         BomSearch(
             onQueryChanged = {},
             onSelect = {},
-            searchState = NetworkState.Error("Hello World")
+            searchState = NetworkState.Error(ErpError.Http(417, "Hello World"))
         )
     }
 }

@@ -5,13 +5,10 @@ import androidx.annotation.RawRes
 import bg.butcher.pda.R
 import bg.butcher.pda.network.ErpService
 import bg.butcher.pda.network.ErpServiceInterceptor
-import bg.butcher.pda.network.erpJson
-import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
-import okhttp3.MediaType.Companion.toMediaType
+import bg.butcher.pda.network.createErpService
 import okhttp3.OkHttpClient
 import okhttp3.tls.HandshakeCertificates
 import okhttp3.tls.decodeCertificatePem
-import retrofit2.Retrofit
 import java.security.cert.X509Certificate
 import kotlin.time.Duration.Companion.seconds
 
@@ -45,14 +42,8 @@ class DefaultAppContainer(context: Context): AppContainer {
         .addInterceptor(ErpServiceInterceptor(settingsRepository))
         .build()
 
-    private val retrofit: Retrofit = Retrofit.Builder()
-        .addConverterFactory(erpJson.asConverterFactory("application/json".toMediaType()))
-        .baseUrl("http://localhost/") // Replaced by interceptor
-        .client(okHttp)
-        .build()
-
     private val service: ErpService by lazy {
-        retrofit.create(ErpService::class.java)
+        createErpService("http://localhost/", okHttp) // Base URL replaced by interceptor
     }
 
     override val erpRepository: ErpRepository by lazy {

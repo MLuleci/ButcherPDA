@@ -119,7 +119,9 @@ fun BatchDialog(
                                 text = stringResource(
                                     when (it.error) {
                                         FetchBatchError.NOT_FOUND -> R.string.invalid_batch_no
-                                        else -> R.string.network_error
+                                        FetchBatchError.FORBIDDEN -> R.string.forbidden_error
+                                        FetchBatchError.NETWORK_ERROR -> R.string.network_error
+                                        else -> R.string.error_message
                                     }
                                 )
                             )

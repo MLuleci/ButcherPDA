@@ -17,6 +17,7 @@ import bg.butcher.pda.model.BatchDetails
 import bg.butcher.pda.model.BomDetails
 import bg.butcher.pda.model.BomSearchResultItem
 import bg.butcher.pda.model.ManufactureEntry
+import bg.butcher.pda.network.ErpError
 import bg.butcher.pda.network.JobSlot
 import bg.butcher.pda.network.NetworkState
 import bg.butcher.pda.util.parseDecimal
@@ -25,7 +26,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import retrofit2.HttpException
 import kotlin.time.Duration.Companion.milliseconds
 
 sealed interface FormUiEffect {
@@ -36,6 +36,7 @@ sealed interface FormUiEffect {
 enum class FetchBatchError {
     NETWORK_ERROR,
     REQUEST_FAILED,
+    FORBIDDEN,
     INVALID_INPUT,
     NOT_FOUND,
 }
@@ -46,15 +47,15 @@ data class FormUiState(
     val explode: Boolean = false,
     val selectedItem: BomSearchResultItem? = null,
     val searchQuery: String = "",
-    val searchState: NetworkState<List<BomSearchResultItem>, String?> = NetworkState.Idle,
+    val searchState: NetworkState<List<BomSearchResultItem>, ErpError> = NetworkState.Idle,
 
     // Assembly page:
     // `fetchState` is cleared when `selectedItem`, `quantityText`, or `explode` are changed
-    val fetchState: NetworkState<BomDetails, String?> = NetworkState.Idle,
+    val fetchState: NetworkState<BomDetails, ErpError> = NetworkState.Idle,
     val items: Map<String, Map<String, Double>> = mapOf(),
     val expiryDaysText: String = "",
     val isFinished: Boolean = true,
-    val submitState: NetworkState<ManufactureEntry, String?> = NetworkState.Idle,
+    val submitState: NetworkState<ManufactureEntry, ErpError> = NetworkState.Idle,
 ) {
     val quantity: Double?
         get() = parseDecimal(quantityText)?.takeIf { it > 0.0 }
@@ -85,7 +86,7 @@ class FormViewModel(private val erpRepository: ErpRepository, private val state:
                     .onSuccess { results -> _uiState.update { it.copy(searchState = NetworkState.Success(results)) } }
                     .onFailure { e ->
                         Log.e("AssemblyViewModel", "searchForBom", e)
-                        _uiState.update { it.copy(searchState = NetworkState.Error(e.message)) }
+                        _uiState.update { it.copy(searchState = NetworkState.Error(ErpError.from(e))) }
                     }
             }
         }
@@ -117,7 +118,7 @@ class FormViewModel(private val erpRepository: ErpRepository, private val state:
                     }
                     .onFailure { e ->
                         Log.e("AssemblyViewModel", "fetchBomDetails", e)
-                        _uiState.update { it.copy(fetchState = NetworkState.Error(e.message)) }
+                        _uiState.update { it.copy(fetchState = NetworkState.Error(ErpError.from(e))) }
                         _effects.send(FormUiEffect.ShowToast(R.string.error_message))
                     }
             }
@@ -134,13 +135,15 @@ class FormViewModel(private val erpRepository: ErpRepository, private val state:
         return result.fold(
             onSuccess = { item -> NetworkState.Success(item) },
             onFailure = { error ->
-                when (error) {
-                    is HttpException -> when (error.code()) {
-                        404 -> NetworkState.Error(FetchBatchError.NOT_FOUND)
-                        else -> NetworkState.Error(FetchBatchError.REQUEST_FAILED)
+                val erpError = ErpError.from(error)
+                NetworkState.Error(
+                    when {
+                        erpError is ErpError.Network -> FetchBatchError.NETWORK_ERROR
+                        erpError is ErpError.Forbidden -> FetchBatchError.FORBIDDEN
+                        erpError is ErpError.Http && erpError.isNotFound -> FetchBatchError.NOT_FOUND
+                        else -> FetchBatchError.REQUEST_FAILED
                     }
-                    else -> NetworkState.Error(FetchBatchError.NETWORK_ERROR)
-                }
+                )
             }
         )
     }

@@ -43,7 +43,7 @@ fun FormScreen(
     var showDialog by rememberSaveable { mutableStateOf(false) }
     Box(modifier = modifier) {
         when (state.fetchState) {
-            is NetworkState.Error -> Centered { ErrorMessage() }
+            is NetworkState.Error -> Centered { ErrorMessage(error = state.fetchState.error) }
             is NetworkState.Loading -> Centered { CircularProgressIndicator() }
             is NetworkState.Success -> {
                 val bom = state.fetchState.data
