@@ -108,17 +108,15 @@ fun BatchDialog(
     }
     val wholeNumber = ingredient?.wholeNumber == true
     val quantity = parseDecimal(quantityText)?.takeIf { validateQuantity(quantityText, wholeNumber) == null }
-    val canSubmit = quantity != null && if (editing != null) {
-        quantity != parseDecimal(editing.quantity)
-    } else {
-        match != null
-    }
+    // The quantity to save, or null while Add / Save should be disabled
+    val submittable = quantity?.takeIf { if (editing != null) it != parseDecimal(editing.quantity) else match != null }
+    val canSubmit = submittable != null
 
     fun submit(): Boolean {
-        if (!canSubmit || quantity == null) return false
+        val amount = submittable ?: return false
         when {
-            editing != null -> onSubmit(editing.itemCode, editing.batchNumber, quantity)
-            match != null -> onSubmit(match.ingredient.itemCode, match.batch.name, quantity)
+            editing != null -> onSubmit(editing.itemCode, editing.batchNumber, amount)
+            match != null -> onSubmit(match.ingredient.itemCode, match.batch.name, amount)
         }
         return true
     }
