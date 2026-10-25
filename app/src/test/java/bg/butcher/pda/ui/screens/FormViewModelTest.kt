@@ -14,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -209,7 +210,7 @@ class FormViewModelTest {
     fun continue_staysOnStartWhenRunIsTooSmall() = runTest(dispatcher) {
         val vm = viewModel()
         val effects = mutableListOf<FormUiEffect>()
-        backgroundScope.launch(dispatcher) { vm.effects.collect { effects += it } }
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.effects.collect { effects += it } }
         vm.setSelectedBom(meatballs)
         // 3 meatballs need 0.36 onions; the only whole number within 0.5 of that is 0
         vm.setQuantity("3")
@@ -357,7 +358,7 @@ class FormViewModelTest {
         val saved = SavedStateHandle()
         val vm = viewModel(saved).readyToSubmit()
         val effects = mutableListOf<FormUiEffect>()
-        backgroundScope.launch(dispatcher) { vm.effects.collect { effects += it } }
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.effects.collect { effects += it } }
         assertTrue(vm.uiState.value.canSubmit)
 
         vm.submit()
@@ -408,7 +409,7 @@ class FormViewModelTest {
     fun printLabel_failureShowsToast() = runTest(dispatcher) {
         val vm = viewModel(printer = { Result.failure(IllegalStateException("No paper")) }).readyToSubmit()
         val effects = mutableListOf<FormUiEffect>()
-        backgroundScope.launch(dispatcher) { vm.effects.collect { effects += it } }
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.effects.collect { effects += it } }
         vm.submit()
         advanceUntilIdle()
 

@@ -36,6 +36,10 @@ android {
         buildConfig = true
         compose = true
     }
+    testOptions {
+        // android.util.Log and friends return defaults instead of throwing in unit tests
+        unitTests.isReturnDefaultValues = true
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
