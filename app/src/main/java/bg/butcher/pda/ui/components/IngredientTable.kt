@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
@@ -177,17 +177,22 @@ fun IngredientTable(
     )
     Column(modifier = modifier.border(params.borderThickness, params.borderColor)) {
         LazyColumn(modifier = Modifier.fillMaxWidth()) {
-            ingredients.forEach { ingredient ->
+            ingredients.forEachIndexed { index, ingredient ->
                 val entries = batches[ingredient.itemCode].orEmpty()
 
                 // Keys are prefixed so an item code and a batch number can't clash
                 stickyHeader(key = "item|${ingredient.itemCode}") {
-                    IngredientTableSection(ingredient)
+                    // Both lines belong to the header, so they stay with it while it's pinned. The first one's
+                    // top line is the table's border.
+                    Column {
+                        if (index > 0) HorizontalDivider(thickness = params.borderThickness, color = params.borderColor)
+                        IngredientTableSection(ingredient)
+                        HorizontalDivider(thickness = params.borderThickness, color = params.borderColor)
+                    }
                 }
 
                 if (entries.isEmpty()) {
                     item(key = "none|${ingredient.itemCode}") {
-                        HorizontalDivider(thickness = params.borderThickness, color = params.borderColor)
                         Text(
                             text = stringResource(R.string.none_label),
                             textAlign = TextAlign.Center,
@@ -200,9 +205,12 @@ fun IngredientTable(
                     }
                 }
 
-                items(entries.toList(), key = { (batchNumber, _) -> "batch|${ingredient.itemCode}|$batchNumber" }) {
-                    val (batchNumber, quantity) = it
-                    HorizontalDivider(thickness = params.borderThickness, color = params.borderColor)
+                itemsIndexed(
+                    entries.toList(),
+                    key = { _, (batchNumber, _) -> "batch|${ingredient.itemCode}|$batchNumber" },
+                ) { row, (batchNumber, quantity) ->
+                    // Between rows only: the header draws the line above the first
+                    if (row > 0) HorizontalDivider(thickness = params.borderThickness, color = params.borderColor)
                     IngredientTableRow(
                         batch = BatchRow(batchNumber, quantity, ingredient.uom),
                         onEdit = {

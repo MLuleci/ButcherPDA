@@ -489,7 +489,7 @@ The design is in 2.14 (summary). Search and Details only need Phase 1 (the netwo
   - **Retrofit:** the official `converter-kotlinx-serialization` replaces Jake Wharton's archived one.
   - **Packages:** `NetworkState` and `JobSlot` move from `network` to `ui.state`, and `JobSlot` loses its unused `launchIfIdle` and `join`.
   - **Settings:** laid out like Start (20 dp padding, 10 dp spacing, Save at the bottom outside the scroll), with `modifier` parameters on its fields and a toast after saving, or if saving fails.
-  - **Small fixes:** `MainApplication.container` has a private setter; `HomeScreen` and `ErrorMessage` take `modifier` as their first optional parameter; `SearchField` drops a redundant `.focusable()`; an unused import and the unused `valid_label` string are gone; Gradle gets 4 GB.
+  - **Small fixes:** `MainApplication.container` has a private setter; `HomeScreen` and `ErrorMessage` take `modifier` as their first optional parameter; an unused import and the unused `valid_label` string are gone. Gradle stays at 2 GB: 4 GB strained the machine alongside Android Studio.
   - **Left as is:** the theme files (Compose and XML), and with them the `material` and `appcompat` libraries the XML theme needs. `printState` keeps `Throwable`, since a printer failure isn't an `ErpError`. The `"name (unit)"` and `" · "` joins have no words to translate.
 
 ---
