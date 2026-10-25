@@ -1,11 +1,18 @@
 package bg.butcher.pda.data
 
+import bg.butcher.pda.model.BatchFilters
+import bg.butcher.pda.model.BatchSort
 import bg.butcher.pda.network.ErpError
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.minus
+import kotlinx.datetime.todayIn
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.time.Clock
 
 class FakeErpRepositoryTest {
     private val repository = FakeErpRepository()
@@ -71,4 +78,60 @@ class FakeErpRepositoryTest {
         val error = result.exceptionOrNull()
         assertTrue(error is ErpError.Http && error.message!!.startsWith("Items do not match BOM"))
     }
+
+    private val noDayLimit = BatchFilters(producedWithinDaysText = "")
+
+    @Test
+    fun searchBatches_listsOnlyBatchesMadeHere() = runTest {
+        val results = repository.searchBatches("", noDayLimit).getOrThrow()
+
+        assertTrue(results.isNotEmpty())
+        assertTrue(results.all { it.defaultBom != null })
+        assertTrue(repository.searchBatches("beef", noDayLimit).getOrThrow().none { it.item == "BEEF" })
+    }
+
+    @Test
+    fun searchBatches_matchesBatchNumberOrProductName() = runTest {
+        val byName = repository.searchBatches("saus", noDayLimit).getOrThrow()
+        val byNumber = repository.searchBatches(byName.first().name.takeLast(4), noDayLimit).getOrThrow()
+
+        assertTrue(byName.isNotEmpty() && byName.all { it.itemName.contains("Sausage") })
+        assertTrue(byNumber.any { it.name == byName.first().name })
+    }
+
+    @Test
+    fun searchBatches_appliesFiltersAndSort() = runTest {
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+
+        val hidingExpired = repository.searchBatches("", noDayLimit.copy(hideExpired = true)).getOrThrow()
+        val lastWeek = repository.searchBatches("", BatchFilters(producedWithinDaysText = "7")).getOrThrow()
+        val byExpiry = repository.searchBatches("", noDayLimit.withSort(BatchSort.EXPIRES)).getOrThrow()
+
+        assertTrue(hidingExpired.all { it.expiryDate != null && it.expiryDate!! >= today })
+        assertTrue(lastWeek.all { it.manufacturingDate!! >= today.minus(7, DateTimeUnit.DAY) })
+        val expiries = byExpiry.mapNotNull { it.expiryDate }
+        assertEquals(expiries.sorted(), expiries)
+    }
+
+    @Test
+    fun getStockEntry_listsTheIngredientsOfASubmittedRun() = runTest {
+        val items = mapOf(
+            "BEEF" to mapOf("BEEF.0001" to 0.6, "BEEF.0002" to 0.4),
+            "SPICE" to mapOf("SPICE.0001" to 0.2),
+            "ONION" to mapOf("ONION.0001" to 3.0),
+        )
+        val entry = repository.createManufactureEntry(
+            "BOM-BEEF_MEATBALLS-001", 25.0, items, expiry, false, true, "request-3",
+        ).getOrThrow()
+
+        val batch = repository.getBatch(entry.batchNumber).getOrThrow()
+        val stockEntry = repository.getStockEntry(batch.referenceName!!).getOrThrow()
+
+        assertEquals("BOM-BEEF_MEATBALLS-001", batch.defaultBom)
+        assertEquals(
+            listOf("BEEF.0001", "BEEF.0002", "SPICE.0001", "ONION.0001"),
+            stockEntry.ingredients.map { it.batchNumber },
+        )
+    }
 }
+

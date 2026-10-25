@@ -143,4 +143,50 @@ class DecodingTest {
 
         assertEquals(BatchDetails(name = "B1", item = "BEEF", itemName = "Beef"), result)
     }
+
+    @Test
+    fun batchList_withLinkFields() {
+        val json = """
+            {"data":[{"name":"BEEF_MEATBALLS0013","item":"BEEF_MEATBALLS","item_name":"Meatballs (Beef)",
+            "default_bom":"BOM-BEEF_MEATBALLS-001","batch_qty":25.0,"stock_uom":"Nos",
+            "manufacturing_date":"2026-10-23","expiry_date":"2026-10-30","reference_name":"MAT-STE-2026-00016"},
+            {"name":"BEEF.0001","item":"BEEF","item_name":"Beef","default_bom":null,"batch_qty":486.5,
+            "stock_uom":"Kg","manufacturing_date":"2026-10-23","expiry_date":"2026-11-06",
+            "reference_name":"MAT-STE-2026-00001"}]}
+        """
+        val result = erpJson.decodeFromString<DataWrapper<List<BatchDetails>>>(json).data
+
+        assertEquals(
+            BatchDetails(
+                name = "BEEF_MEATBALLS0013",
+                item = "BEEF_MEATBALLS",
+                itemName = "Meatballs (Beef)",
+                stockUom = "Nos",
+                manufacturingDate = LocalDate(2026, 10, 23),
+                expiryDate = LocalDate(2026, 10, 30),
+                batchQuantity = 25.0,
+                referenceName = "MAT-STE-2026-00016",
+                defaultBom = "BOM-BEEF_MEATBALLS-001",
+            ),
+            result[0],
+        )
+        // A raw material: no default BOM, so it isn't made here
+        assertNull(result[1].defaultBom)
+    }
+
+    @Test
+    fun stockEntry_fullDocument() {
+        val json = javaClass.classLoader!!.getResource("stock_entry.json")!!.readText()
+        val result = erpJson.decodeFromString<DataWrapper<StockEntryDetails>>(json).data
+
+        assertEquals("MAT-STE-2026-00016", result.name)
+        assertEquals(LocalDate(2026, 10, 23), result.postingDate)
+        assertEquals(
+            listOf(StockEntryRow("BEEF", "Beef", 1.0, "Kg", "BEEF.0001")),
+            result.ingredients,
+        )
+        val finished = result.items.single { it.isFinishedItem == 1 }
+        assertEquals("BEEF_MEATBALLS0013", finished.batchNumber)
+        assertEquals(25.0, finished.quantity, 0.0)
+    }
 }

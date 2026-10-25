@@ -1,10 +1,14 @@
 package bg.butcher.pda.data
 
 import bg.butcher.pda.model.BatchDetails
+import bg.butcher.pda.model.BatchFilters
+import bg.butcher.pda.model.BatchSort
 import bg.butcher.pda.model.BomDetails
 import bg.butcher.pda.model.BomDetailsItem
 import bg.butcher.pda.model.BomSearchResultItem
 import bg.butcher.pda.model.ManufactureEntry
+import bg.butcher.pda.model.StockEntryDetails
+import bg.butcher.pda.model.StockEntryRow
 import bg.butcher.pda.network.ErpError
 import bg.butcher.pda.util.roundForErp
 import kotlinx.coroutines.delay
@@ -71,6 +75,7 @@ class FakeErpRepository(
     // Keyed by upper-case batch number; Frappe names are case-insensitive
     private val batches = ConcurrentHashMap<String, BatchDetails>()
     private val entries = ConcurrentHashMap<String, ManufactureEntry>()
+    private val stockEntries = ConcurrentHashMap<String, StockEntryDetails>()
     private val entryCounter = AtomicInteger(0)
 
     init {
@@ -92,6 +97,61 @@ class FakeErpRepository(
                 )
             }
         }
+        // Finished batches whose expiry falls on each state Details shows: days from today, produced and expiring
+        listOf(
+            Triple(SAUSAGE, -12, -7),
+            Triple(SAUSAGE, -5, 0),
+            Triple(MEATBALLS, -6, 1),
+            Triple(KEBAPCHE, -2, 7),
+            Triple(MINCE, -1, null),
+        ).forEachIndexed { i, (item, producedInDays, expiresInDays) ->
+            val bom = BOMS.first { it.item == item && it.isDefault }
+            val stockEntryId = "MAT-STE-FAKE-S${(i + 1).toString().padStart(4, '0')}"
+            val produced = today.plus(producedInDays, DateTimeUnit.DAY)
+            addManufactured(
+                bom = bom,
+                batchNumber = "${item.code}S${(i + 1).toString().padStart(3, '0')}",
+                stockEntryId = stockEntryId,
+                quantity = bom.quantity,
+                produced = produced,
+                expiry = expiresInDays?.let { today.plus(it, DateTimeUnit.DAY) },
+                ingredients = bom.ingredients.associate { (ingredient, quantity) ->
+                    ingredient.code to mapOf("${ingredient.code}.0001" to quantity)
+                },
+            )
+        }
+    }
+
+    /** Stores the finished batch and the Stock Entry that made it, as the server does on submit. */
+    private fun addManufactured(
+        bom: FakeBom,
+        batchNumber: String,
+        stockEntryId: String,
+        quantity: Double,
+        produced: LocalDate,
+        expiry: LocalDate?,
+        ingredients: Map<String, Map<String, Double>>,
+    ) {
+        addBatch(
+            BatchDetails(
+                name = batchNumber,
+                item = bom.item.code,
+                itemName = bom.item.name,
+                stockUom = bom.item.uom,
+                manufacturingDate = produced,
+                expiryDate = expiry,
+                batchQuantity = quantity,
+                referenceDoctype = "Stock Entry",
+                referenceName = stockEntryId,
+                defaultBom = BOMS.firstOrNull { it.item == bom.item && it.isDefault }?.name,
+            )
+        )
+        // One ingredient row per batch, then the finished item, like create_manufacture_entry
+        val rows = ingredients.flatMap { (itemCode, batchQuantities) ->
+            val item = RAW_MATERIALS.first { it.code == itemCode }
+            batchQuantities.map { (batch, qty) -> StockEntryRow(item.code, item.name, qty, item.uom, batch) }
+        } + StockEntryRow(bom.item.code, bom.item.name, quantity, bom.item.uom, batchNumber, isFinishedItem = 1)
+        stockEntries[stockEntryId] = StockEntryDetails(stockEntryId, produced, rows)
     }
 
     private fun addBatch(batch: BatchDetails) {
@@ -138,6 +198,32 @@ class FakeErpRepository(
 
     override suspend fun getBatch(batchNumber: String): Result<BatchDetails> = respond {
         batches[batchNumber.trim().uppercase()] ?: throw ErpError.Http(404, "Batch $batchNumber not found")
+    }
+
+    override suspend fun searchBatches(query: String, filters: BatchFilters, start: Int): Result<List<BatchDetails>> =
+        respond {
+            val text = query.trim()
+            val days = filters.producedWithinDays
+            val comparator = when (filters.sort) {
+                BatchSort.PRODUCED -> compareBy<BatchDetails, LocalDate?>(nullsFirst()) { it.manufacturingDate }
+                BatchSort.EXPIRES -> compareBy(nullsFirst()) { it.expiryDate }
+                BatchSort.PRODUCT -> compareBy { it.itemName.lowercase() }
+            }
+            batches.values
+                .filter { it.defaultBom != null }
+                .filter { days == null || (it.manufacturingDate ?: return@filter false) >= today.minus(days, DateTimeUnit.DAY) }
+                .filter { !filters.hideExpired || (it.expiryDate ?: return@filter false) >= today }
+                .filter { text.isEmpty() || it.name.contains(text, ignoreCase = true) || it.itemName.contains(text, ignoreCase = true) }
+                .sortedWith(
+                    (if (filters.descending) comparator.reversed() else comparator)
+                        .thenByDescending { it.name }
+                )
+                .drop(start)
+                .take(BATCH_PAGE_SIZE)
+        }
+
+    override suspend fun getStockEntry(name: String): Result<StockEntryDetails> = respond {
+        stockEntries[name] ?: throw ErpError.Http(404, "Stock Entry $name not found")
     }
 
     override suspend fun getBomDetails(
@@ -194,19 +280,7 @@ class FakeErpRepository(
         val number = entryCounter.incrementAndGet()
         val stockEntryId = "MAT-STE-FAKE-${number.toString().padStart(5, '0')}"
         val batchNumber = "${fake.item.code}${number.toString().padStart(4, '0')}"
-        addBatch(
-            BatchDetails(
-                name = batchNumber,
-                item = fake.item.code,
-                itemName = fake.item.name,
-                stockUom = fake.item.uom,
-                manufacturingDate = today,
-                expiryDate = expiryDate,
-                batchQuantity = quantity,
-                referenceDoctype = "Stock Entry",
-                referenceName = stockEntryId,
-            )
-        )
+        addManufactured(fake, batchNumber, stockEntryId, quantity, today, expiryDate, items)
         ManufactureEntry(
             stockEntryId = stockEntryId,
             batchNumber = batchNumber,

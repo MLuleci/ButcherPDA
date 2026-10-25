@@ -22,4 +22,7 @@ data class BatchDetails(
     val referenceDoctype: String? = null,
     @SerialName("reference_name")
     val referenceName: String? = null,
+    // Only in list requests, through the item link. Set for items made here.
+    @SerialName("default_bom")
+    val defaultBom: String? = null,
 )

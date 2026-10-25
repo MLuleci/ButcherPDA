@@ -1,19 +1,26 @@
 package bg.butcher.pda.data
 
 import bg.butcher.pda.model.BatchDetails
+import bg.butcher.pda.model.BatchFilters
 import bg.butcher.pda.model.BomDetails
 import bg.butcher.pda.model.BomSearchResultItem
 import bg.butcher.pda.model.ManufactureEntry
 import bg.butcher.pda.model.ManufactureEntryRequest
+import bg.butcher.pda.model.StockEntryDetails
 import bg.butcher.pda.network.ErpError
 import bg.butcher.pda.network.ErpService
 import bg.butcher.pda.util.roundForErp
 import kotlinx.coroutines.CancellationException
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.minus
+import kotlinx.datetime.todayIn
 import kotlinx.serialization.json.JsonArrayBuilder
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.addJsonArray
 import kotlinx.serialization.json.buildJsonArray
+import kotlin.time.Clock
 
 /** Runs [block], turning any failure except cancellation into an [ErpError]. */
 internal suspend fun <T> apiCall(block: suspend () -> T): Result<T> = try {
@@ -36,8 +43,21 @@ private fun JsonArrayBuilder.filter(field: String, operator: String, value: Stri
 private fun JsonArrayBuilder.filter(field: String, operator: String, value: Int) =
     addJsonArray { add(field); add(operator); add(value) }
 
+private val BATCH_FIELDS = buildJsonArray {
+    add("name")
+    add("item")
+    add("item.item_name as item_name")
+    add("item.default_bom as default_bom")
+    add("batch_qty")
+    add("stock_uom")
+    add("manufacturing_date")
+    add("expiry_date")
+    add("reference_name")
+}.toString()
+
 class NetworkErpRepository(
-    private val service: ErpService
+    private val service: ErpService,
+    private val today: () -> LocalDate = { Clock.System.todayIn(TimeZone.currentSystemDefault()) },
 ): ErpRepository {
     override suspend fun searchBom(query: String): Result<List<BomSearchResultItem>> = apiCall {
         val fields = buildJsonArray {
@@ -65,7 +85,44 @@ class NetworkErpRepository(
     }
 
     override suspend fun getBatch(batchNumber: String): Result<BatchDetails> = apiCall {
-        service.getBatch(batchNumber).data
+        val options = mapOf(
+            "fields" to BATCH_FIELDS,
+            "filters" to buildJsonArray { filter("name", "=", batchNumber.trim()) }.toString(),
+        )
+        service.listBatches(options).data.firstOrNull()
+            ?: throw ErpError.Http(404, "Batch $batchNumber not found")
+    }
+
+    override suspend fun searchBatches(query: String, filters: BatchFilters, start: Int): Result<List<BatchDetails>> =
+        apiCall {
+            val date = today()
+            val conditions = buildJsonArray {
+                filter("item.default_bom", "is", "set")
+                filters.producedWithinDays?.let { days ->
+                    filter("manufacturing_date", ">=", date.minus(days, DateTimeUnit.DAY).toString())
+                }
+                if (filters.hideExpired) filter("expiry_date", ">=", date.toString())
+            }
+            val options = buildMap {
+                put("fields", BATCH_FIELDS)
+                put("filters", conditions.toString())
+                query.trim().takeIf { it.isNotEmpty() }?.let { text ->
+                    val pattern = "%${likeEscape(text)}%"
+                    put("or_filters", buildJsonArray {
+                        filter("name", "like", pattern)
+                        filter("item.item_name", "like", pattern)
+                    }.toString())
+                }
+                // From the enum only, since Frappe sends it to the database as SQL; ties by name keep pages stable
+                put("order_by", "${filters.sort.field} ${if (filters.descending) "desc" else "asc"}, name desc")
+                put("limit_start", start.toString())
+                put("limit_page_length", BATCH_PAGE_SIZE.toString())
+            }
+            service.listBatches(options).data
+        }
+
+    override suspend fun getStockEntry(name: String): Result<StockEntryDetails> = apiCall {
+        service.getStockEntry(name).data
     }
 
     override suspend fun getBomDetails(

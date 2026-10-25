@@ -7,6 +7,7 @@ import bg.butcher.pda.model.DataWrapper
 import bg.butcher.pda.model.ManufactureEntry
 import bg.butcher.pda.model.ManufactureEntryRequest
 import bg.butcher.pda.model.MessageWrapper
+import bg.butcher.pda.model.StockEntryDetails
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -23,8 +24,12 @@ interface ErpService {
     @GET("/api/resource/BOM")
     suspend fun searchBom(@QueryMap options: Map<String, String>): DataWrapper<List<BomSearchResultItem>>
 
-    @GET("/api/resource/Batch/{id}")
-    suspend fun getBatch(@Path("id") batchNumber: String): DataWrapper<BatchDetails>
+    // A list request, so link fields such as `item.default_bom` can be read
+    @GET("/api/resource/Batch")
+    suspend fun listBatches(@QueryMap options: Map<String, String>): DataWrapper<List<BatchDetails>>
+
+    @GET("/api/resource/Stock Entry/{id}")
+    suspend fun getStockEntry(@Path("id") name: String): DataWrapper<StockEntryDetails>
 
     @FormUrlEncoded
     @POST("/api/method/my_app.my_app.api.get_bom_details")

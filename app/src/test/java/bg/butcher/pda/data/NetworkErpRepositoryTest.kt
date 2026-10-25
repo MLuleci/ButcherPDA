@@ -1,5 +1,7 @@
 package bg.butcher.pda.data
 
+import bg.butcher.pda.model.BatchFilters
+import bg.butcher.pda.model.BatchSort
 import bg.butcher.pda.network.ErpError
 import bg.butcher.pda.network.createErpService
 import bg.butcher.pda.network.erpJson
@@ -19,12 +21,13 @@ import org.junit.Test
 
 class NetworkErpRepositoryTest {
     private val server = MockWebServer()
+    private val today = LocalDate(2026, 10, 25)
     private lateinit var repository: NetworkErpRepository
 
     @Before
     fun setUp() {
         server.start()
-        repository = NetworkErpRepository(createErpService(server.url("/").toString(), OkHttpClient()))
+        repository = NetworkErpRepository(createErpService(server.url("/").toString(), OkHttpClient())) { today }
     }
 
     @After
@@ -83,33 +86,87 @@ class NetworkErpRepositoryTest {
         assertTrue(url.encodedQuery!!.contains("%2550"))
     }
 
+    private val batchFields =
+        """["name","item","item.item_name as item_name","item.default_bom as default_bom",""" +
+            """"batch_qty","stock_uom","manufacturing_date","expiry_date","reference_name"]"""
+
     @Test
-    fun getBatch_unwrapsData() = runTest {
+    fun searchBatches_sendsTheConfirmedRequest() = runTest {
         enqueue(
-            """{"data":{"name":"BEEF_MEATBALLS0001","item":"BEEF_MEATBALLS","item_name":"Meatballs (Beef)",
-            "stock_uom":"Nos","batch_qty":25.0,"docstatus":0,"doctype":"Batch"}}"""
+            """{"data":[{"name":"BEEF_MEATBALLS0013","item":"BEEF_MEATBALLS","item_name":"Meatballs (Beef)",
+            "default_bom":"BOM-BEEF_MEATBALLS-001","batch_qty":25.0,"stock_uom":"Nos",
+            "manufacturing_date":"2026-10-23","expiry_date":"2026-10-30","reference_name":"MAT-STE-2026-00016"}]}"""
         )
+        val filters = BatchFilters(producedWithinDaysText = "30", hideExpired = true).withSort(BatchSort.EXPIRES)
 
-        val result = repository.getBatch("BEEF_MEATBALLS0001").getOrThrow()
+        val result = repository.searchBatches(" beef ", filters, start = 30).getOrThrow()
 
-        assertEquals("BEEF_MEATBALLS0001", result.name)
-        assertEquals("Nos", result.stockUom)
+        assertEquals("BOM-BEEF_MEATBALLS-001", result.single().defaultBom)
         val url = server.takeRequest().url
-        assertEquals("/api/resource/Batch/BEEF_MEATBALLS0001", url.encodedPath)
-        assertNull(url.query)
+        assertEquals("/api/resource/Batch", url.encodedPath)
+        assertEquals(batchFields, url.queryParameter("fields"))
+        assertEquals(
+            """[["item.default_bom","is","set"],["manufacturing_date",">=","2026-09-25"],["expiry_date",">=","2026-10-25"]]""",
+            url.queryParameter("filters"),
+        )
+        assertEquals(
+            """[["name","like","%beef%"],["item.item_name","like","%beef%"]]""",
+            url.queryParameter("or_filters"),
+        )
+        assertEquals("expiry_date asc, name desc", url.queryParameter("order_by"))
+        assertEquals("30", url.queryParameter("limit_start"))
+        assertEquals(BATCH_PAGE_SIZE.toString(), url.queryParameter("limit_page_length"))
     }
 
     @Test
-    fun getBatch_notFound() = runTest {
+    fun searchBatches_withoutTextOrLimits() = runTest {
+        enqueue("""{"data":[]}""")
+        val filters = BatchFilters(producedWithinDaysText = "").withSort(BatchSort.PRODUCT)
+
+        repository.searchBatches("  ", filters)
+
+        val url = server.takeRequest().url
+        assertEquals("""[["item.default_bom","is","set"]]""", url.queryParameter("filters"))
+        assertNull(url.queryParameter("or_filters"))
+        assertEquals("item_name asc, name desc", url.queryParameter("order_by"))
+        assertEquals("0", url.queryParameter("limit_start"))
+    }
+
+    @Test
+    fun getBatch_usesAOneRowListRequest() = runTest {
         enqueue(
-            """{"exc_type":"DoesNotExistError","_server_messages":"[\"{\\\"message\\\":\\\"Партида NOPE not found\\\",\\\"as_table\\\":false,\\\"title\\\":\\\"Message\\\",\\\"indicator\\\":\\\"red\\\",\\\"raise_exception\\\":1}\"]"}""",
-            code = 404,
+            """{"data":[{"name":"BEEF_MEATBALLS0013","item":"BEEF_MEATBALLS","item_name":"Meatballs (Beef)",
+            "default_bom":"BOM-BEEF_MEATBALLS-001","batch_qty":25.0,"stock_uom":"Nos",
+            "manufacturing_date":"2026-10-23","expiry_date":"2026-10-30","reference_name":"MAT-STE-2026-00016"}]}"""
         )
 
-        val error = repository.getBatch("NOPE").assertError<ErpError.Http>()
+        val result = repository.getBatch(" BEEF_MEATBALLS0013 ").getOrThrow()
+
+        assertEquals("Nos", result.stockUom)
+        assertEquals("BOM-BEEF_MEATBALLS-001", result.defaultBom)
+        val url = server.takeRequest().url
+        assertEquals("/api/resource/Batch", url.encodedPath)
+        assertEquals(batchFields, url.queryParameter("fields"))
+        assertEquals("""[["name","=","BEEF_MEATBALLS0013"]]""", url.queryParameter("filters"))
+    }
+
+    @Test
+    fun getBatch_emptyListIsNotFound() = runTest {
+        enqueue("""{"data":[]}""")
+
+        val error = repository.getBatch("NOPE.0001").assertError<ErpError.Http>()
 
         assertTrue(error.isNotFound)
-        assertEquals("Партида NOPE not found", error.message)
+    }
+
+    @Test
+    fun getStockEntry_encodesTheDoctypeAndUnwrapsData() = runTest {
+        enqueue(javaClass.classLoader!!.getResource("stock_entry.json")!!.readText())
+
+        val result = repository.getStockEntry("MAT-STE-2026-00016").getOrThrow()
+
+        assertEquals("BEEF.0001", result.ingredients.single().batchNumber)
+        assertEquals("/api/resource/Stock%20Entry/MAT-STE-2026-00016", server.takeRequest().url.encodedPath)
     }
 
     @Test
@@ -207,7 +264,7 @@ class NetworkErpRepositoryTest {
     @Test
     fun unexpectedResponse() = runTest {
         // What a list returns when the role can't read the fields: only `name`
-        enqueue("""{"data":{"name":"B1"}}""")
+        enqueue("""{"data":[{"name":"B1"}]}""")
 
         repository.getBatch("B1").assertError<ErpError.UnexpectedResponse>()
     }
