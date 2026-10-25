@@ -299,6 +299,7 @@ fun MainApp(
                         state = state,
                         onRetry = viewModel::loadBatch,
                         onRetryIngredients = viewModel::retryIngredients,
+                        onPrint = viewModel::printLabel,
                         modifier = Modifier.fillMaxSize()
                     )
                 }

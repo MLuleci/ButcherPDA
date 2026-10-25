@@ -46,4 +46,15 @@ class SettingsValidationTest {
         assertNull(normaliseApiKey("key:secret:extra"))
         assertNull(normaliseApiKey("key: secret"))
     }
+
+    @Test
+    fun normaliseLabelHeight_acceptsWholeMillimetresInRange() {
+        assertEquals(40, normaliseLabelHeight(" 40 "))
+        assertEquals(30, normaliseLabelHeight("30"))
+        assertEquals(150, normaliseLabelHeight("150"))
+        assertNull(normaliseLabelHeight("29"))
+        assertNull(normaliseLabelHeight("151"))
+        assertNull(normaliseLabelHeight("40.5"))
+        assertNull(normaliseLabelHeight(""))
+    }
 }

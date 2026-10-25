@@ -8,10 +8,13 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import bg.butcher.pda.MainApplication
+import bg.butcher.pda.data.DEFAULT_LABEL_HEIGHT_MM
+import bg.butcher.pda.data.PaperSize
 import bg.butcher.pda.data.PdaSettings
 import bg.butcher.pda.data.SettingsRepository
 import bg.butcher.pda.data.normaliseApiKey
 import bg.butcher.pda.data.normaliseBaseUrl
+import bg.butcher.pda.data.normaliseLabelHeight
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,14 +35,18 @@ data class SettingsUiState(
     val isDirty: Boolean = false,
     val baseUrl: SettingState = SettingState(),
     val apiKey: SettingState = SettingState(),
+    val paperSize: PaperSize = PaperSize.MM_80,
+    val labelHeight: SettingState = labelHeightState(DEFAULT_LABEL_HEIGHT_MM.toString()),
 ) {
     val canSave: Boolean
-        get() = isLoaded && isDirty && baseUrl.isValid && apiKey.isValid
+        get() = isLoaded && isDirty && baseUrl.isValid && apiKey.isValid && labelHeight.isValid
 }
 
 private fun baseUrlState(url: String) = SettingState(url, normaliseBaseUrl(url) != null)
 
 private fun apiKeyState(key: String) = SettingState(key, normaliseApiKey(key) != null)
+
+private fun labelHeightState(mm: String) = SettingState(mm, normaliseLabelHeight(mm) != null)
 
 class SettingsViewModel(private val settingsRepository: SettingsRepository): ViewModel() {
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -57,6 +64,8 @@ class SettingsViewModel(private val settingsRepository: SettingsRepository): Vie
                         isLoaded = true,
                         baseUrl = baseUrlState(settings.baseUrl),
                         apiKey = apiKeyState(settings.apiKey),
+                        paperSize = settings.paperSize,
+                        labelHeight = labelHeightState(settings.labelHeightMm.toString()),
                     )
                 }
             }
@@ -71,15 +80,24 @@ class SettingsViewModel(private val settingsRepository: SettingsRepository): Vie
         _uiState.update { it.copy(isDirty = true, apiKey = apiKeyState(key)) }
     }
 
+    fun setPaperSize(size: PaperSize) {
+        _uiState.update { it.copy(isDirty = true, paperSize = size) }
+    }
+
+    fun setLabelHeight(mm: String) {
+        _uiState.update { it.copy(isDirty = true, labelHeight = labelHeightState(mm)) }
+    }
+
     fun save() {
         val state = _uiState.value
         if (!state.canSave) return
         val baseUrl = normaliseBaseUrl(state.baseUrl.value) ?: return
         val apiKey = normaliseApiKey(state.apiKey.value) ?: return
+        val labelHeight = normaliseLabelHeight(state.labelHeight.value) ?: return
         _uiState.update { it.copy(isDirty = false) }
         viewModelScope.launch {
             try {
-                settingsRepository.update(PdaSettings(baseUrl.toString(), apiKey))
+                settingsRepository.update(PdaSettings(baseUrl.toString(), apiKey, state.paperSize, labelHeight))
                 _uiState.update {
                     if (it.isDirty) it else it.copy(baseUrl = baseUrlState(baseUrl.toString()), apiKey = apiKeyState(apiKey))
                 }

@@ -116,6 +116,7 @@ fun DetailsScreen(
     state: DetailsUiState,
     onRetry: () -> Unit,
     onRetryIngredients: () -> Unit,
+    onPrint: () -> Unit,
     modifier: Modifier = Modifier,
     today: LocalDate = today(),
 ) {
@@ -154,11 +155,10 @@ fun DetailsScreen(
                     batch.referenceName?.let { LabelledValue(stringResource(R.string.stock_entry_label), it) }
                     IngredientList(state.ingredients, onRetryIngredients)
                 }
-                // Printing is wired up with the label printer (Step 6.5)
                 if (batch.isMadeHere) {
                     OutlinedButton(
-                        onClick = {},
-                        enabled = false,
+                        onClick = onPrint,
+                        enabled = state.printState !is NetworkState.Loading,
                         modifier = Modifier
                             .align(Alignment.CenterHorizontally)
                             .fillMaxWidth(.9f)
@@ -192,6 +192,7 @@ private fun DetailsScreenPreview(state: DetailsUiState) {
             state = state,
             onRetry = {},
             onRetryIngredients = {},
+            onPrint = {},
             modifier = Modifier.fillMaxSize(),
             today = LocalDate(2026, 10, 25),
         )

@@ -1,10 +1,12 @@
 package bg.butcher.pda.hardware
 
 import android.util.Log
+import bg.butcher.pda.model.BatchDetails
 import bg.butcher.pda.model.ManufactureEntry
 import bg.butcher.pda.util.formatDecimal
 import kotlinx.coroutines.delay
 import kotlinx.datetime.LocalDate
+import okhttp3.HttpUrl
 import kotlin.time.Duration.Companion.milliseconds
 
 data class LabelData(
@@ -17,6 +19,15 @@ data class LabelData(
     val stockEntryId: String?,
 )
 
+/** The batch's ERPNext page, which the PDA reduces back to the batch number when scanned (`parseScan`). */
+fun batchUrl(baseUrl: HttpUrl, batchNumber: String): String =
+    baseUrl.newBuilder()
+        .encodedPath("/")
+        .addPathSegments("app/batch")
+        .addPathSegment(batchNumber)
+        .build()
+        .toString()
+
 fun ManufactureEntry.toLabel() = LabelData(
     batchNumber = batchNumber,
     itemName = itemName,
@@ -24,6 +35,16 @@ fun ManufactureEntry.toLabel() = LabelData(
     productionDate = productionDate,
     expiryDate = expiryDate,
     stockEntryId = stockEntryId,
+)
+
+/** From Details: the batch's current amount, in its stock unit. */
+fun BatchDetails.toLabel() = LabelData(
+    batchNumber = name,
+    itemName = itemName,
+    quantity = "${formatDecimal(batchQuantity ?: 0.0)} ${stockUom.orEmpty()}".trim(),
+    productionDate = manufacturingDate,
+    expiryDate = expiryDate,
+    stockEntryId = referenceName,
 )
 
 fun interface LabelPrinter {

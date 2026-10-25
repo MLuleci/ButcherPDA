@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -16,10 +17,29 @@ import java.io.IOException
 
 val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
+/**
+ * The label roll; the width is the printer's maximum for that paper. On 58 mm the QR code is capped, so the
+ * batch number beside it stays readable.
+ */
+enum class PaperSize(val widthPx: Int, val maxQrPx: Int) {
+    MM_80(570, Int.MAX_VALUE),
+    MM_58(384, 180),
+}
+
+const val DEFAULT_LABEL_HEIGHT_MM = 40
+
+// Below 30 mm the text no longer fits beside the QR code; the upper limit is only a guard against typos
+val LABEL_HEIGHT_RANGE_MM = 30..150
+
 data class PdaSettings(
     val baseUrl: String = "",
     val apiKey: String = "",
+    val paperSize: PaperSize = PaperSize.MM_80,
+    val labelHeightMm: Int = DEFAULT_LABEL_HEIGHT_MM,
 )
+
+/** A whole number of millimetres within [LABEL_HEIGHT_RANGE_MM]. */
+fun normaliseLabelHeight(input: String): Int? = input.trim().toIntOrNull()?.takeIf { it in LABEL_HEIGHT_RANGE_MM }
 
 /** HTTPS only. A bare host name gets `https://` added. */
 fun normaliseBaseUrl(input: String): HttpUrl? {
@@ -38,6 +58,8 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     private object Keys {
         val BASE_URL = stringPreferencesKey("base_url")
         val API_KEY = stringPreferencesKey("api_key")
+        val PAPER_SIZE = stringPreferencesKey("paper_size")
+        val LABEL_HEIGHT = intPreferencesKey("label_height_mm")
     }
 
     val settings: Flow<PdaSettings> = dataStore.data
@@ -46,6 +68,8 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             PdaSettings(
                 baseUrl = p[Keys.BASE_URL].orEmpty(),
                 apiKey = p[Keys.API_KEY].orEmpty(),
+                paperSize = PaperSize.entries.firstOrNull { it.name == p[Keys.PAPER_SIZE] } ?: PaperSize.MM_80,
+                labelHeightMm = p[Keys.LABEL_HEIGHT]?.takeIf { it in LABEL_HEIGHT_RANGE_MM } ?: DEFAULT_LABEL_HEIGHT_MM,
             )
         }
 
@@ -53,6 +77,8 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         dataStore.edit { p ->
             p[Keys.BASE_URL] = settings.baseUrl
             p[Keys.API_KEY] = settings.apiKey
+            p[Keys.PAPER_SIZE] = settings.paperSize.name
+            p[Keys.LABEL_HEIGHT] = settings.labelHeightMm
         }
     }
 }

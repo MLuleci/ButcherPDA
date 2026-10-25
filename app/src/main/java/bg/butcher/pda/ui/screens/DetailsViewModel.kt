@@ -13,8 +13,11 @@ import androidx.navigation.toRoute
 import bg.butcher.pda.MainApplication
 import bg.butcher.pda.R
 import bg.butcher.pda.data.ErpRepository
+import bg.butcher.pda.hardware.FakeLabelPrinter
+import bg.butcher.pda.hardware.LabelPrinter
 import bg.butcher.pda.hardware.ScannedCode
 import bg.butcher.pda.hardware.parseScan
+import bg.butcher.pda.hardware.toLabel
 import bg.butcher.pda.model.BatchDetails
 import bg.butcher.pda.model.StockEntryRow
 import bg.butcher.pda.network.ErpError
@@ -26,6 +29,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 private const val TAG = "DetailsViewModel"
 
@@ -46,6 +50,7 @@ data class DetailsUiState(
     val batch: NetworkState<BatchDetails, ErpError> = NetworkState.Idle,
     // Only loaded once the batch has
     val ingredients: NetworkState<Ingredients, ErpError> = NetworkState.Idle,
+    val printState: NetworkState<Unit, Throwable> = NetworkState.Idle,
 )
 
 /** Only batches made here have a Manufacture entry behind them; others may come from a receipt. */
@@ -54,6 +59,7 @@ val BatchDetails.isMadeHere: Boolean get() = defaultBom != null
 class DetailsViewModel(
     batchNumber: String,
     private val erpRepository: ErpRepository,
+    private val labelPrinter: LabelPrinter = FakeLabelPrinter(),
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(DetailsUiState(batchNumber))
     val uiState = _uiState.asStateFlow()
@@ -85,6 +91,24 @@ class DetailsViewModel(
     fun retryIngredients() {
         val batch = (_uiState.value.batch as? NetworkState.Success)?.data ?: return
         loadJob.replace { loadIngredients(batch) }
+    }
+
+    /** Prints the batch's current amount; a label can be printed again, e.g. for a torn one. */
+    fun printLabel() {
+        val state = _uiState.value
+        val batch = (state.batch as? NetworkState.Success)?.data?.takeIf { it.isMadeHere } ?: return
+        if (state.printState is NetworkState.Loading) return
+
+        _uiState.update { it.copy(printState = NetworkState.Loading) }
+        viewModelScope.launch {
+            labelPrinter.print(batch.toLabel())
+                .onSuccess { _uiState.update { it.copy(printState = NetworkState.Success(Unit)) } }
+                .onFailure { e ->
+                    Log.e(TAG, "printLabel", e)
+                    _uiState.update { it.copy(printState = NetworkState.Error(e)) }
+                    _effects.send(DetailsUiEffect.ShowToast(R.string.printer_not_ready))
+                }
+        }
     }
 
     /** Shows the scanned batch instead, or keeps this one with a toast if it can't be found. */
@@ -129,7 +153,7 @@ class DetailsViewModel(
             initializer {
                 val application = this[APPLICATION_KEY] as MainApplication
                 val route = createSavedStateHandle().toRoute<Details>()
-                DetailsViewModel(route.batch, application.container.erpRepository)
+                DetailsViewModel(route.batch, application.container.erpRepository, application.container.labelPrinter)
             }
         }
     }

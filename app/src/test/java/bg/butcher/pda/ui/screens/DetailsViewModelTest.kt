@@ -3,6 +3,7 @@ package bg.butcher.pda.ui.screens
 import bg.butcher.pda.R
 import bg.butcher.pda.data.ErpRepository
 import bg.butcher.pda.data.FakeErpRepository
+import bg.butcher.pda.hardware.LabelData
 import bg.butcher.pda.model.StockEntryDetails
 import bg.butcher.pda.network.ErpError
 import bg.butcher.pda.network.NetworkState
@@ -142,4 +143,46 @@ class DetailsViewModelTest {
 
         assertEquals(listOf(DetailsUiEffect.ShowToast(R.string.error_message, rejected = false)), effects)
     }
+
+    @Test
+    fun printLabel_printsTheCurrentAmountOfABatchMadeHere() = runTest(dispatcher) {
+        val printed = mutableListOf<LabelData>()
+        val vm = DetailsViewModel("PORK_SAUSAGES001", FakeErpRepository()) { printed += it; Result.success(Unit) }
+        advanceUntilIdle()
+
+        vm.printLabel()
+        advanceUntilIdle()
+
+        val label = printed.single()
+        assertEquals("PORK_SAUSAGES001", label.batchNumber)
+        assertEquals("10 Kg", label.quantity)
+        assertEquals("MAT-STE-FAKE-S0001", label.stockEntryId)
+        assertTrue(vm.uiState.value.printState is NetworkState.Success)
+    }
+
+    @Test
+    fun printLabel_failureShowsAToastAndCanBeRetried() = runTest(dispatcher) {
+        val vm = DetailsViewModel("PORK_SAUSAGES001", FakeErpRepository()) { Result.failure(IllegalStateException()) }
+        val effects = effectsOf(vm)
+        advanceUntilIdle()
+
+        vm.printLabel()
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.printState is NetworkState.Error)
+        assertEquals(listOf(DetailsUiEffect.ShowToast(R.string.printer_not_ready)), effects)
+    }
+
+    @Test
+    fun printLabel_ignoresBatchesNotMadeHere() = runTest(dispatcher) {
+        val printed = mutableListOf<LabelData>()
+        val vm = DetailsViewModel("BEEF.0001", FakeErpRepository()) { printed += it; Result.success(Unit) }
+        advanceUntilIdle()
+
+        vm.printLabel()
+        advanceUntilIdle()
+
+        assertTrue(printed.isEmpty())
+    }
 }
+

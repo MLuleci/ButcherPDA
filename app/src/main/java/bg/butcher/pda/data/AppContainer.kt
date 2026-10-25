@@ -10,10 +10,12 @@ import bg.butcher.pda.hardware.FakeBarcodeScanner
 import bg.butcher.pda.hardware.FakeLabelPrinter
 import bg.butcher.pda.hardware.LabelPrinter
 import bg.butcher.pda.hardware.QsPdaHardware
+import bg.butcher.pda.hardware.QsPdaLabelPrinter
 import bg.butcher.pda.hardware.ScanFeedback
 import bg.butcher.pda.network.ErpService
 import bg.butcher.pda.network.ErpServiceInterceptor
 import bg.butcher.pda.network.createErpService
+import kotlinx.coroutines.flow.first
 import okhttp3.OkHttpClient
 import okhttp3.tls.HandshakeCertificates
 import okhttp3.tls.decodeCertificatePem
@@ -65,7 +67,12 @@ class DefaultAppContainer(context: Context): AppContainer {
         if (BuildConfig.USE_FAKE_ERP) FakeErpRepository(latency = 1.seconds) else NetworkErpRepository(service)
     }
 
-    override val labelPrinter: LabelPrinter = FakeLabelPrinter()
+    override val labelPrinter: LabelPrinter =
+        if (QsPdaHardware.available) {
+            QsPdaLabelPrinter(context.applicationContext) { settingsRepository.settings.first() }
+        } else {
+            FakeLabelPrinter()
+        }
 
     override val barcodeScanner: BarcodeScanner =
         if (QsPdaHardware.available) BroadcastBarcodeScanner(context.applicationContext) else FakeBarcodeScanner()
