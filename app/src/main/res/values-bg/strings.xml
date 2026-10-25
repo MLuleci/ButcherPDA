@@ -121,6 +121,17 @@
     <string name="invalid_label_height">Въведете цяло число от %1$d до %2$d.</string>
     <string name="settings_saved">Настройките са запазени</string>
     <string name="settings_save_failed">Настройките не бяха запазени. Опитайте отново.</string>
+    <string name="app_version">Версия %1$s</string>
+    <string name="update_check">Проверка за обновления</string>
+    <string name="update_install">Изтегляне и инсталиране</string>
+    <string name="update_up_to_date">Това е най-новата версия.</string>
+    <string name="update_available">Има версия %1$s.</string>
+    <string name="update_downloading">Изтегляне на версия %1$s…</string>
+    <string name="update_check_failed">Проверката за обновления не успя. Проверете връзката и опитайте отново.</string>
+    <string name="update_download_failed">Изтеглянето не завърши. Опитайте отново.</string>
+    <string name="update_not_this_app">Изтегленият файл не е тази версия на приложението, затова не беше инсталиран.</string>
+    <string name="update_wrong_signature">Обновлението не е подписано с ключа на приложението, затова не беше инсталирано.</string>
+    <string name="update_no_installer">Това устройство не може да инсталира приложения извън своя магазин.</string>
     <string name="millimetres">мм</string>
     <string name="label_caption_produced">П</string>
     <string name="label_caption_expires">Г</string>

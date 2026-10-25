@@ -1,5 +1,6 @@
 package bg.butcher.pda.ui
 
+import android.content.ActivityNotFoundException
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
@@ -130,13 +131,19 @@ fun MainApp(
                 val viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory)
                 val state by viewModel.uiState.collectAsState()
                 val context = LocalContext.current
+                val installer = (context.applicationContext as MainApplication).container.updateInstaller
                 LaunchedEffect(viewModel) {
                     viewModel.effects.collect { effect ->
-                        val message = when (effect) {
-                            SettingsUiEffect.SAVED -> R.string.settings_saved
-                            SettingsUiEffect.SAVE_FAILED -> R.string.settings_save_failed
+                        when (effect) {
+                            is SettingsUiEffect.ShowToast ->
+                                Toast.makeText(context, effect.messageResId, Toast.LENGTH_SHORT).show()
+                            is SettingsUiEffect.Install -> try {
+                                context.startActivity(installer.installIntent(effect.apk))
+                            } catch (_: ActivityNotFoundException) {
+                                // A locked-down firmware may have no installer for apps from outside its store
+                                Toast.makeText(context, R.string.update_no_installer, Toast.LENGTH_LONG).show()
+                            }
                         }
-                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                     }
                 }
                 SettingsScreen(
@@ -147,6 +154,8 @@ fun MainApp(
                     onPaperTypeChange = viewModel::setPaperType,
                     onLabelHeightChange = viewModel::setLabelHeight,
                     onSave = viewModel::save,
+                    onCheckForUpdate = viewModel::checkForUpdate,
+                    onInstallUpdate = viewModel::installUpdate,
                     modifier = Modifier.fillMaxSize()
                 )
             }

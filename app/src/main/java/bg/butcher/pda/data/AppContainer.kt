@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.first
 import okhttp3.OkHttpClient
 import okhttp3.tls.HandshakeCertificates
 import okhttp3.tls.decodeCertificatePem
+import java.io.File
 import java.security.cert.X509Certificate
 import kotlin.time.Duration.Companion.seconds
 
@@ -28,15 +29,18 @@ interface AppContainer {
     val labelPrinter: LabelPrinter
     val barcodeScanner: BarcodeScanner
     val scanFeedback: ScanFeedback
+    val updateRepository: UpdateRepository
+    val updateInstaller: UpdateInstaller
 }
 
-// Android 6 doesn't ship the Let's Encrypt roots (ISRG Root X1 arrived in 7.1.1),
-// so trust them explicitly on top of the system store.
-private val LETS_ENCRYPT_ROOTS = listOf(
+// Roots Android 6 may not ship, trusted on top of the system store: Let's Encrypt (ISRG Root X1 arrived in 7.1.1),
+// used by the ERP server and GitHub's release downloads, and USERTrust ECC, which api.github.com chains to.
+private val EXTRA_ROOTS = listOf(
     R.raw.isrg_root_x1,
     R.raw.isrg_root_x2,
     R.raw.isrg_root_yr,
     R.raw.isrg_root_ye,
+    R.raw.usertrust_ecc,
 )
 
 private fun Context.readCertificate(@RawRes id: Int): X509Certificate =
@@ -48,7 +52,7 @@ class DefaultAppContainer(context: Context): AppContainer {
     private val certificates by lazy {
         HandshakeCertificates.Builder()
             .addPlatformTrustedCertificates()
-            .apply { LETS_ENCRYPT_ROOTS.forEach { addTrustedCertificate(context.readCertificate(it)) } }
+            .apply { EXTRA_ROOTS.forEach { addTrustedCertificate(context.readCertificate(it)) } }
             .build()
     }
 
@@ -78,4 +82,14 @@ class DefaultAppContainer(context: Context): AppContainer {
         if (QsPdaHardware.available) BroadcastBarcodeScanner(context.applicationContext) else FakeBarcodeScanner()
 
     override val scanFeedback by lazy { ScanFeedback(context.applicationContext) }
+
+    // Without the ERP interceptor, which would send these requests to the ERP server
+    override val updateRepository by lazy {
+        val client = OkHttpClient.Builder()
+            .sslSocketFactory(certificates.sslSocketFactory(), certificates.trustManager)
+            .build()
+        UpdateRepository(client, File(context.cacheDir, "updates"), BuildConfig.VERSION_CODE)
+    }
+
+    override val updateInstaller by lazy { UpdateInstaller(context.applicationContext) }
 }

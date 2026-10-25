@@ -120,6 +120,17 @@
     <string name="invalid_label_height">Enter a whole number from %1$d to %2$d.</string>
     <string name="settings_saved">Settings saved</string>
     <string name="settings_save_failed">Couldn\'t save the settings. Try again.</string>
+    <string name="app_version">Version %1$s</string>
+    <string name="update_check">Check for updates</string>
+    <string name="update_install">Download and install</string>
+    <string name="update_up_to_date">This is the latest version.</string>
+    <string name="update_available">Version %1$s is available.</string>
+    <string name="update_downloading">Downloading version %1$s…</string>
+    <string name="update_check_failed">Couldn\'t check for updates. Check the connection and try again.</string>
+    <string name="update_download_failed">The download didn\'t finish. Try again.</string>
+    <string name="update_not_this_app">The downloaded file isn\'t this version of the app, so it wasn\'t installed.</string>
+    <string name="update_wrong_signature">The update isn\'t signed with this app\'s key, so it wasn\'t installed.</string>
+    <string name="update_no_installer">This device can\'t install apps from outside its store.</string>
     <string name="millimetres">mm</string>
     <string name="label_caption_produced">P</string>
     <string name="label_caption_expires">E</string>

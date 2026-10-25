@@ -1,6 +1,7 @@
 package bg.butcher.pda.ui.screens
 
 import android.util.Log
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
@@ -8,14 +9,21 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import bg.butcher.pda.MainApplication
+import bg.butcher.pda.R
+import bg.butcher.pda.data.ApkProblem
+import bg.butcher.pda.data.AvailableUpdate
 import bg.butcher.pda.data.DEFAULT_LABEL_HEIGHT_MM
 import bg.butcher.pda.data.PaperSize
 import bg.butcher.pda.data.PaperType
 import bg.butcher.pda.data.PdaSettings
 import bg.butcher.pda.data.SettingsRepository
+import bg.butcher.pda.data.UpdateRepository
 import bg.butcher.pda.data.normaliseApiKey
 import bg.butcher.pda.data.normaliseBaseUrl
 import bg.butcher.pda.data.normaliseLabelHeight
+import bg.butcher.pda.ui.state.JobSlot
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,6 +32,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 import java.io.IOException
 
 private const val TAG = "SettingsViewModel"
@@ -41,13 +51,31 @@ data class SettingsUiState(
     val paperSize: PaperSize = PaperSize.MM_80,
     val labelHeight: SettingState = labelHeightState(DEFAULT_LABEL_HEIGHT_MM.toString(), PaperType.LABELS),
     val paperType: PaperType = PaperType.LABELS,
+    val update: UpdateState = UpdateState.Idle,
 ) {
     val canSave: Boolean
         get() = isLoaded && isDirty && baseUrl.isValid && apiKey.isValid && labelHeight.isValid
 }
 
-/** Told once, as a toast. */
-enum class SettingsUiEffect { SAVED, SAVE_FAILED }
+sealed interface UpdateState {
+    data object Idle : UpdateState
+    data object Checking : UpdateState
+    data object UpToDate : UpdateState
+    data class Available(val update: AvailableUpdate) : UpdateState
+    // Null until the size is known
+    data class Downloading(val update: AvailableUpdate, val progress: Float?) : UpdateState
+    // Downloaded and checked; the installer can be opened again if it was cancelled
+    data class Ready(val update: AvailableUpdate, val apk: File) : UpdateState
+    data class Failed(val error: UpdateError) : UpdateState
+}
+
+enum class UpdateError { CHECK_FAILED, DOWNLOAD_FAILED, NOT_THIS_APP, WRONG_SIGNATURE }
+
+sealed interface SettingsUiEffect {
+    /** Told once, as a toast. */
+    data class ShowToast(@StringRes val messageResId: Int) : SettingsUiEffect
+    data class Install(val apk: File) : SettingsUiEffect
+}
 
 private fun baseUrlState(url: String) = SettingState(url, normaliseBaseUrl(url) != null)
 
@@ -56,7 +84,11 @@ private fun apiKeyState(key: String) = SettingState(key, normaliseApiKey(key) !=
 private fun labelHeightState(mm: String, paperType: PaperType) =
     SettingState(mm, normaliseLabelHeight(mm, paperType) != null)
 
-class SettingsViewModel(private val settingsRepository: SettingsRepository): ViewModel() {
+class SettingsViewModel(
+    private val settingsRepository: SettingsRepository,
+    private val updateRepository: UpdateRepository,
+    private val checkApk: (File, Int) -> ApkProblem?,
+) : ViewModel() {
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
@@ -120,20 +152,84 @@ class SettingsViewModel(private val settingsRepository: SettingsRepository): Vie
                 _uiState.update {
                     if (it.isDirty) it else it.copy(baseUrl = baseUrlState(baseUrl.toString()), apiKey = apiKeyState(apiKey))
                 }
-                _effects.send(SettingsUiEffect.SAVED)
+                _effects.send(SettingsUiEffect.ShowToast(R.string.settings_saved))
             } catch (e: IOException) {
                 Log.e(TAG, "save", e)
                 _uiState.update { it.copy(isDirty = true) }
-                _effects.send(SettingsUiEffect.SAVE_FAILED)
+                _effects.send(SettingsUiEffect.ShowToast(R.string.settings_save_failed))
             }
+        }
+    }
+
+    // One check or download at a time
+    private val updateJob = JobSlot(viewModelScope)
+
+    fun checkForUpdate() {
+        if (updateJob.isActive) return
+        _uiState.update { it.copy(update = UpdateState.Checking) }
+        updateJob.replace {
+            val next = try {
+                updateRepository.checkForUpdate()?.let { UpdateState.Available(it) } ?: UpdateState.UpToDate
+            } catch (e: IOException) {
+                Log.w(TAG, "checkForUpdate", e)
+                UpdateState.Failed(UpdateError.CHECK_FAILED)
+            }
+            _uiState.update { it.copy(update = next) }
+        }
+    }
+
+    /** Downloads the available update, checks it, and opens the installer. */
+    fun installUpdate() {
+        when (val state = _uiState.value.update) {
+            is UpdateState.Ready -> _effects.trySend(SettingsUiEffect.Install(state.apk))
+            is UpdateState.Available -> download(state.update)
+            else -> {}
+        }
+    }
+
+    private fun download(update: AvailableUpdate) {
+        if (updateJob.isActive) return
+        _uiState.update { it.copy(update = UpdateState.Downloading(update, null)) }
+        updateJob.replace {
+            val apk = try {
+                updateRepository.download(update) { progress ->
+                    _uiState.update { it.copy(update = UpdateState.Downloading(update, progress)) }
+                }
+            } catch (e: IOException) {
+                Log.w(TAG, "download", e)
+                _uiState.update { it.copy(update = UpdateState.Failed(UpdateError.DOWNLOAD_FAILED)) }
+                return@replace
+            }
+            // The package manager can throw on unusual firmware; that's treated as an unusable file
+            val problem = try {
+                withContext(Dispatchers.IO) { checkApk(apk, update.versionCode) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: RuntimeException) {
+                Log.w(TAG, "checkApk", e)
+                ApkProblem.UNREADABLE
+            }
+            if (problem != null) {
+                Log.w(TAG, "Refused update ${update.versionName}: $problem")
+                apk.delete()
+                val error = if (problem == ApkProblem.WRONG_SIGNATURE) UpdateError.WRONG_SIGNATURE else UpdateError.NOT_THIS_APP
+                _uiState.update { it.copy(update = UpdateState.Failed(error)) }
+                return@replace
+            }
+            _uiState.update { it.copy(update = UpdateState.Ready(update, apk)) }
+            _effects.send(SettingsUiEffect.Install(apk))
         }
     }
 
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
-                val application = (this[APPLICATION_KEY] as MainApplication)
-                SettingsViewModel(settingsRepository = application.container.settingsRepository)
+                val container = (this[APPLICATION_KEY] as MainApplication).container
+                SettingsViewModel(
+                    settingsRepository = container.settingsRepository,
+                    updateRepository = container.updateRepository,
+                    checkApk = container.updateInstaller::check,
+                )
             }
         }
     }
