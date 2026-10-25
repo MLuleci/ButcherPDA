@@ -29,13 +29,16 @@ fun SearchField(
     state: TextFieldState,
     modifier: Modifier = Modifier,
     requestFocus: Boolean = false,
+    placeholder: String = stringResource(R.string.search_label),
+    // Enter, before the keyboard is put away
+    onSearch: () -> Unit = {},
 ) {
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     TextField(
         state = state,
         lineLimits = TextFieldLineLimits.SingleLine,
-        placeholder = { Text(stringResource(R.string.search_label)) },
+        placeholder = { Text(placeholder) },
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search_label)) },
         trailingIcon = {
             if (state.text.isNotEmpty()) {
@@ -45,8 +48,11 @@ fun SearchField(
             }
         },
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-        // Results update as you type, so Enter only puts the keyboard away
-        onKeyboardAction = { focusManager.clearFocus() },
+        // Results update as you type, so Enter doesn't need to start a search
+        onKeyboardAction = {
+            onSearch()
+            focusManager.clearFocus()
+        },
         modifier = modifier
             .fillMaxWidth()
             .focusable()

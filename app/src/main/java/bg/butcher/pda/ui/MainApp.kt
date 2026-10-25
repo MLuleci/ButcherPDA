@@ -4,13 +4,10 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.annotation.StringRes
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -52,11 +49,13 @@ import bg.butcher.pda.ui.components.BatchDialogState
 import bg.butcher.pda.ui.components.BatchDialogStateSaver
 import bg.butcher.pda.ui.components.BatchInput
 import bg.butcher.pda.ui.components.OnScan
-import bg.butcher.pda.ui.components.SearchField
 import bg.butcher.pda.ui.screens.FormScreen
 import bg.butcher.pda.ui.screens.FormUiEffect
 import bg.butcher.pda.ui.screens.FormViewModel
 import bg.butcher.pda.ui.screens.HomeScreen
+import bg.butcher.pda.ui.screens.SearchScreen
+import bg.butcher.pda.ui.screens.SearchUiEffect
+import bg.butcher.pda.ui.screens.SearchViewModel
 import bg.butcher.pda.ui.screens.SettingsScreen
 import bg.butcher.pda.ui.screens.StartScreen
 import bg.butcher.pda.ui.screens.SummaryScreen
@@ -226,19 +225,45 @@ fun MainApp(
                 }
             }
 
-            // Placeholders until the real Search and Details screens (Steps 6.3 and 6.4)
             navigation<BatchesGraph>(startDestination = Search) {
                 composable<Search> {
-                    val open = { batch: String -> navController.navigate(Details(batch)) { launchSingleTop = true } }
-                    OnScan { raw -> (parseScan(raw) as? ScannedCode.Batch)?.let { open(it.number) } }
-                    val query = rememberTextFieldState()
-                    Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
-                        SearchField(query, requestFocus = true)
-                        Button(onClick = { query.text.toString().trim().takeIf { it.isNotEmpty() }?.let(open) }) {
-                            Text(stringResource(R.string.search_label))
+                    val viewModel: SearchViewModel = viewModel(factory = SearchViewModel.Factory)
+                    val state by viewModel.uiState.collectAsState()
+                    val context = LocalContext.current
+                    var showFilters by rememberSaveable { mutableStateOf(false) }
+                    val open = { batch: String ->
+                        // A scan opens Details even with the sheet open; don't bring it back on return
+                        showFilters = false
+                        navController.navigate(Details(batch)) { launchSingleTop = true }
+                    }
+                    LaunchedEffect(viewModel) {
+                        viewModel.effects.collect { effect ->
+                            when (effect) {
+                                is SearchUiEffect.ShowDetails -> open(effect.batch)
+                            }
                         }
                     }
+                    OnScan(
+                        onNoRead = {
+                            scanFeedback.failed()
+                            Toast.makeText(context, R.string.scan_no_read, Toast.LENGTH_SHORT).show()
+                        },
+                        onScan = viewModel::onScan,
+                    )
+                    SearchScreen(
+                        state = state,
+                        onQueryChange = viewModel::setQuery,
+                        onSubmit = viewModel::onSubmit,
+                        onFiltersChange = viewModel::setFilters,
+                        onRetry = viewModel::retry,
+                        onLoadMore = viewModel::loadMore,
+                        onOpen = { open(it.name) },
+                        showFilters = showFilters,
+                        onShowFiltersChange = { showFilters = it },
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
+                // Placeholder until the real Details screen (Step 6.4)
                 composable<Details> { entry ->
                     val details = entry.toRoute<Details>()
                     // Replaces this page, so Back always goes to Search
