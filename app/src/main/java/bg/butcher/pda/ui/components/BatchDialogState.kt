@@ -12,9 +12,18 @@ data class BatchInfo(
     val uom: String = "",
 )
 
-// Scans skip the typing debounce
+/**
+ * The batch field's text and where it came from. Scans skip the typing debounce, and each has its
+ * own [scanId], so scanning the same label again (e.g. after a network error) looks it up again.
+ */
 @Serializable
-data class BatchInput(val text: String, val fromScan: Boolean = false)
+data class BatchInput(
+    val text: String,
+    val fromScan: Boolean = false,
+    val scanId: Long = 0,
+    // A scan that isn't a batch label; shown as an error without a lookup
+    val unrecognised: Boolean = false,
+)
 
 @Serializable
 sealed interface BatchDialogState {

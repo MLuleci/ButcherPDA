@@ -48,6 +48,7 @@ sealed interface BatchLookupError {
     data object InvalidInput : BatchLookupError
     data object NotFound : BatchLookupError
     data object AlreadyAdded : BatchLookupError
+    data object NotABatchLabel : BatchLookupError
     data class NotInRecipe(val batch: BatchDetails) : BatchLookupError
     data class Failed(val error: ErpError) : BatchLookupError
 }

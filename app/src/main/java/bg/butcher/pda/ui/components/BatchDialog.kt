@@ -24,6 +24,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -46,6 +48,7 @@ import kotlin.time.Duration.Companion.milliseconds
 private fun lookupErrorText(error: BatchLookupError): String = when (error) {
     BatchLookupError.InvalidInput, BatchLookupError.NotFound -> stringResource(R.string.invalid_batch_no)
     BatchLookupError.AlreadyAdded -> stringResource(R.string.batch_already_added)
+    BatchLookupError.NotABatchLabel -> stringResource(R.string.not_a_batch_label)
     is BatchLookupError.NotInRecipe -> stringResource(R.string.batch_not_in_recipe, error.batch.name, error.batch.itemName)
     is BatchLookupError.Failed -> errorText(error.error)
 }
@@ -58,6 +61,7 @@ fun BatchDialog(
     lookupBatch: suspend (String) -> NetworkState<BatchMatch, BatchLookupError>,
     onSubmit: (itemCode: String, batchNumber: String, quantity: Double) -> Unit,
     onDismiss: () -> Unit,
+    onScanAccepted: () -> Unit = {},
 ) {
     val editing = (state as? BatchDialogState.Editing)?.batch
     val input = (state as? BatchDialogState.Adding)?.input
@@ -68,16 +72,28 @@ fun BatchDialog(
     // Reset with the batch number, so an earlier match can't be added for a new one
     var lookup by remember(input) { mutableStateOf<NetworkState<BatchMatch, BatchLookupError>>(NetworkState.Idle) }
 
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+
     LaunchedEffect(input) {
         if (input == null) return@LaunchedEffect
+        if (input.fromScan) {
+            focusManager.clearFocus(force = true)
+            keyboard?.hide()
+        }
+        if (input.unrecognised) {
+            lookup = NetworkState.Error(BatchLookupError.NotABatchLabel)
+            return@LaunchedEffect
+        }
         val number = input.text.trim()
         if (number.isEmpty()) return@LaunchedEffect
         if (!input.fromScan) delay(300.milliseconds)
         lookup = NetworkState.Loading
         val result = lookupBatch(number)
         lookup = result
-        if (result is NetworkState.Success && !quantityTyped) {
-            quantityText = result.data.prefill?.let { formatDecimal(it) }.orEmpty()
+        if (result is NetworkState.Success) {
+            if (input.fromScan) onScanAccepted()
+            if (!quantityTyped) quantityText = result.data.prefill?.let { formatDecimal(it) }.orEmpty()
         }
     }
 

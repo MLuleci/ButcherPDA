@@ -82,6 +82,7 @@ fun FormScreen(
     onSubmit: () -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
+    onScanAccepted: () -> Unit = {},
 ) {
     Box(modifier = modifier) {
         when (state.fetchState) {
@@ -145,6 +146,7 @@ fun FormScreen(
                             if (save(itemCode, batchNumber, quantity) == null) onDialogChange(null)
                         },
                         onDismiss = { onDialogChange(null) },
+                        onScanAccepted = onScanAccepted,
                     )
                 }
             }

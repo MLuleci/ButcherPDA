@@ -4,8 +4,13 @@ import android.content.Context
 import androidx.annotation.RawRes
 import bg.butcher.pda.BuildConfig
 import bg.butcher.pda.R
+import bg.butcher.pda.hardware.BarcodeScanner
+import bg.butcher.pda.hardware.BroadcastBarcodeScanner
+import bg.butcher.pda.hardware.FakeBarcodeScanner
 import bg.butcher.pda.hardware.FakeLabelPrinter
 import bg.butcher.pda.hardware.LabelPrinter
+import bg.butcher.pda.hardware.QsPdaHardware
+import bg.butcher.pda.hardware.ScanFeedback
 import bg.butcher.pda.network.ErpService
 import bg.butcher.pda.network.ErpServiceInterceptor
 import bg.butcher.pda.network.createErpService
@@ -19,6 +24,8 @@ interface AppContainer {
     val erpRepository: ErpRepository
     val settingsRepository: SettingsRepository
     val labelPrinter: LabelPrinter
+    val barcodeScanner: BarcodeScanner
+    val scanFeedback: ScanFeedback
 }
 
 // Android 6 doesn't ship the Let's Encrypt roots (ISRG Root X1 arrived in 7.1.1),
@@ -59,4 +66,9 @@ class DefaultAppContainer(context: Context): AppContainer {
     }
 
     override val labelPrinter: LabelPrinter = FakeLabelPrinter()
+
+    override val barcodeScanner: BarcodeScanner =
+        if (QsPdaHardware.available) BroadcastBarcodeScanner(context.applicationContext) else FakeBarcodeScanner()
+
+    override val scanFeedback by lazy { ScanFeedback(context.applicationContext) }
 }

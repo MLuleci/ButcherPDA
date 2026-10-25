@@ -38,10 +38,15 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
+import bg.butcher.pda.MainApplication
 import bg.butcher.pda.R
+import bg.butcher.pda.hardware.ScannedCode
+import bg.butcher.pda.hardware.parseScan
 import bg.butcher.pda.network.NetworkState
 import bg.butcher.pda.ui.components.BatchDialogState
 import bg.butcher.pda.ui.components.BatchDialogStateSaver
+import bg.butcher.pda.ui.components.BatchInput
+import bg.butcher.pda.ui.components.OnScan
 import bg.butcher.pda.ui.screens.FormScreen
 import bg.butcher.pda.ui.screens.FormViewModel
 import bg.butcher.pda.ui.screens.FormUiEffect
@@ -104,6 +109,7 @@ fun MainApp(
     val backDispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
     val currentScreen = MainScreen.entries.firstOrNull { it.name == backStackEntry?.destination?.route }
         ?: MainScreen.Home
+    val scanFeedback = (LocalContext.current.applicationContext as MainApplication).container.scanFeedback
     // Set by a route that mustn't be left yet, e.g. Form while submitting
     var backBlocked by remember { mutableStateOf(false) }
 
@@ -171,6 +177,23 @@ fun MainApp(
                     var dialog by rememberSaveable(stateSaver = BatchDialogStateSaver) {
                         mutableStateOf<BatchDialogState?>(null)
                     }
+                    val context = LocalContext.current
+                    // Only once the BOM has loaded: there are no ingredients to check a batch against before
+                    OnScan(enabled = state.fetchState is NetworkState.Success && !submitting) { raw ->
+                        if (dialog is BatchDialogState.Editing) {
+                            Toast.makeText(context, R.string.scan_ignored_while_editing, Toast.LENGTH_SHORT).show()
+                        } else {
+                            val code = parseScan(raw)
+                            dialog = BatchDialogState.Adding(
+                                BatchInput(
+                                    text = (code as? ScannedCode.Batch)?.number ?: raw.trim(),
+                                    fromScan = true,
+                                    scanId = System.nanoTime(),
+                                    unrecognised = code is ScannedCode.Unrecognised,
+                                )
+                            )
+                        }
+                    }
                     FormScreen(
                         state = state,
                         dialog = dialog,
@@ -181,6 +204,7 @@ fun MainApp(
                         onRemoveBatch = { itemCode, batchNumber -> viewModel.removeBatch(itemCode, batchNumber) },
                         onSubmit = viewModel::submit,
                         onRetry = viewModel::reloadBomDetails,
+                        onScanAccepted = scanFeedback::accepted,
                         modifier = Modifier.fillMaxSize()
                     )
                 }
