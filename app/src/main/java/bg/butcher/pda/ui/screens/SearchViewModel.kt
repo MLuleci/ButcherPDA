@@ -58,7 +58,7 @@ sealed interface SearchUiEffect {
     data object ScanRejected : SearchUiEffect
 }
 
-private object Saved {
+private object SavedSearch {
     const val QUERY = "query"
     const val FILTERS = "filters"
 }
@@ -66,8 +66,8 @@ private object Saved {
 class SearchViewModel(private val erpRepository: ErpRepository, private val saved: SavedStateHandle) : ViewModel() {
     private val _uiState = MutableStateFlow(
         SearchUiState(
-            query = saved[Saved.QUERY] ?: "",
-            filters = saved.get<String>(Saved.FILTERS)
+            query = saved[SavedSearch.QUERY] ?: "",
+            filters = saved.get<String>(SavedSearch.FILTERS)
                 ?.let { runCatching { Json.decodeFromString<BatchFilters>(it) }.getOrNull() }
                 ?: BatchFilters(),
         )
@@ -85,14 +85,14 @@ class SearchViewModel(private val erpRepository: ErpRepository, private val save
 
     fun setQuery(query: String) {
         if (query == _uiState.value.query) return
-        saved[Saved.QUERY] = query
+        saved[SavedSearch.QUERY] = query
         _uiState.update { it.copy(query = query, lookupError = null) }
         search(debounce = 300.milliseconds)
     }
 
     fun setFilters(filters: BatchFilters) {
         if (filters == _uiState.value.filters) return
-        saved[Saved.FILTERS] = Json.encodeToString(filters)
+        saved[SavedSearch.FILTERS] = Json.encodeToString(filters)
         _uiState.update { it.copy(filters = filters) }
         search(debounce = Duration.ZERO)
     }
