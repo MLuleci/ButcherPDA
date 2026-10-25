@@ -4,10 +4,13 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
@@ -38,6 +42,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import bg.butcher.pda.MainApplication
 import bg.butcher.pda.R
 import bg.butcher.pda.hardware.ScannedCode
@@ -47,43 +52,27 @@ import bg.butcher.pda.ui.components.BatchDialogState
 import bg.butcher.pda.ui.components.BatchDialogStateSaver
 import bg.butcher.pda.ui.components.BatchInput
 import bg.butcher.pda.ui.components.OnScan
+import bg.butcher.pda.ui.components.SearchField
 import bg.butcher.pda.ui.screens.FormScreen
-import bg.butcher.pda.ui.screens.FormViewModel
 import bg.butcher.pda.ui.screens.FormUiEffect
+import bg.butcher.pda.ui.screens.FormViewModel
 import bg.butcher.pda.ui.screens.HomeScreen
-import bg.butcher.pda.ui.screens.StartScreen
 import bg.butcher.pda.ui.screens.SettingsScreen
+import bg.butcher.pda.ui.screens.StartScreen
 import bg.butcher.pda.ui.screens.SummaryScreen
 import bg.butcher.pda.ui.screens.canFetch
-
-// Nested graph for the manufacturing flow; its screens share one FormViewModel
-const val MANUFACTURE_GRAPH = "manufacture"
-
-enum class MainScreen(@StringRes val title: Int) {
-    Home(title = R.string.app_name),
-    Settings(title = R.string.settings_title),
-
-    // Manufacturing flow:
-    Start(title = R.string.select_title),
-    Form(title = R.string.assembly_title),
-    Summary(title = R.string.summary_title),
-
-    // Search flow:
-    Search(title = R.string.search_title),
-    Details(title = R.string.details_title),
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainAppBar(
-    currentScreen: MainScreen,
+    @StringRes title: Int,
     canNavigateBack: Boolean,
     navigateUp: () -> Unit,
     modifier: Modifier = Modifier,
     navigateUpEnabled: Boolean = true,
 ) {
     TopAppBar(
-        title = { Text(stringResource(currentScreen.title)) },
+        title = { Text(stringResource(title)) },
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer,
         ),
@@ -107,8 +96,6 @@ fun MainApp(
 ) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val backDispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
-    val currentScreen = MainScreen.entries.firstOrNull { it.name == backStackEntry?.destination?.route }
-        ?: MainScreen.Home
     val scanFeedback = (LocalContext.current.applicationContext as MainApplication).container.scanFeedback
     // Set by a route that mustn't be left yet, e.g. Form while submitting
     var backBlocked by remember { mutableStateOf(false) }
@@ -116,7 +103,7 @@ fun MainApp(
     Scaffold(
         topBar = {
             MainAppBar(
-                currentScreen = currentScreen,
+                title = backStackEntry?.destination.title(),
                 canNavigateBack = navController.previousBackStackEntry != null,
                 navigateUpEnabled = !backBlocked,
                 // Through the dispatcher, so the routes' BackHandlers apply to it too
@@ -126,23 +113,23 @@ fun MainApp(
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = MainScreen.Home.name,
+            startDestination = Home,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            composable(route = MainScreen.Home.name) {
+            composable<Home> {
                 HomeScreen(
                     onButtonClicked = { navController.navigate(it) { launchSingleTop = true } },
                     modifier = Modifier.fillMaxSize()
                 )
             }
-            composable(route = MainScreen.Settings.name) {
+            composable<Settings> {
                 SettingsScreen(modifier = Modifier.fillMaxSize())
             }
 
-            navigation(route = MANUFACTURE_GRAPH, startDestination = MainScreen.Start.name) {
-                composable(route = MainScreen.Start.name) {
+            navigation<ManufactureGraph>(startDestination = Start) {
+                composable<Start> {
                     val viewModel = it.formViewModel(navController)
                     val state by viewModel.uiState.collectAsState()
                     CollectFormEffects(viewModel, navController)
@@ -158,7 +145,7 @@ fun MainApp(
                         modifier = Modifier.fillMaxSize()
                     )
                 }
-                composable(route = MainScreen.Form.name) {
+                composable<Form> {
                     val viewModel = it.formViewModel(navController)
                     val state by viewModel.uiState.collectAsState()
                     CollectFormEffects(viewModel, navController)
@@ -215,11 +202,11 @@ fun MainApp(
                         modifier = Modifier.fillMaxSize()
                     )
                 }
-                composable(route = MainScreen.Summary.name) {
+                composable<Summary> {
                     val viewModel = it.formViewModel(navController)
                     val state by viewModel.uiState.collectAsState()
                     CollectFormEffects(viewModel, navController)
-                    val done = { navController.popBackStack(MANUFACTURE_GRAPH, inclusive = true) }
+                    val done = { navController.popBackStack<ManufactureGraph>(inclusive = true) }
                     BackHandler { done() }
                     // Kept while the page animates out after "Same BOM again" clears it
                     val entry = remember { (state.submitState as? NetworkState.Success)?.data }
@@ -230,12 +217,37 @@ fun MainApp(
                             onPrint = viewModel::printLabel,
                             onSameBomAgain = {
                                 viewModel.startAgain()
-                                navController.popBackStack(MainScreen.Start.name, inclusive = false)
+                                navController.popBackStack<Start>(inclusive = false)
                             },
                             onDone = { done() },
                             modifier = Modifier.fillMaxSize()
                         )
                     }
+                }
+            }
+
+            // Placeholders until the real Search and Details screens (Steps 6.3 and 6.4)
+            navigation<BatchesGraph>(startDestination = Search) {
+                composable<Search> {
+                    val open = { batch: String -> navController.navigate(Details(batch)) { launchSingleTop = true } }
+                    OnScan { raw -> (parseScan(raw) as? ScannedCode.Batch)?.let { open(it.number) } }
+                    val query = rememberTextFieldState()
+                    Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
+                        SearchField(query, requestFocus = true)
+                        Button(onClick = { query.text.toString().trim().takeIf { it.isNotEmpty() }?.let(open) }) {
+                            Text(stringResource(R.string.search_label))
+                        }
+                    }
+                }
+                composable<Details> { entry ->
+                    val details = entry.toRoute<Details>()
+                    // Replaces this page, so Back always goes to Search
+                    OnScan { raw ->
+                        (parseScan(raw) as? ScannedCode.Batch)?.let {
+                            navController.navigate(Details(it.number)) { popUpTo<Details> { inclusive = true } }
+                        }
+                    }
+                    Text(details.batch, modifier = Modifier.padding(20.dp))
                 }
             }
         }
@@ -250,12 +262,12 @@ private fun CollectFormEffects(viewModel: FormViewModel, navController: NavContr
         viewModel.effects.collect { effect ->
             when (effect) {
                 FormUiEffect.GotoForm -> {
-                    navController.navigate(MainScreen.Form.name) { launchSingleTop = true }
+                    navController.navigate(Form) { launchSingleTop = true }
                 }
                 // Replaces Form, so Back can't reach the submitted form
                 FormUiEffect.GotoSummary -> {
-                    navController.navigate(MainScreen.Summary.name) {
-                        popUpTo(MainScreen.Form.name) { inclusive = true }
+                    navController.navigate(Summary) {
+                        popUpTo<Form> { inclusive = true }
                         launchSingleTop = true
                     }
                 }
@@ -269,6 +281,6 @@ private fun CollectFormEffects(viewModel: FormViewModel, navController: NavContr
 
 @Composable
 private fun NavBackStackEntry.formViewModel(navController: NavController): FormViewModel {
-    val graphEntry = remember(this) { navController.getBackStackEntry(MANUFACTURE_GRAPH) }
+    val graphEntry = remember(this) { navController.getBackStackEntry<ManufactureGraph>() }
     return viewModel(viewModelStoreOwner = graphEntry, factory = FormViewModel.Factory)
 }
