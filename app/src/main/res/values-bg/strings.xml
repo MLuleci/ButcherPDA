@@ -101,4 +101,16 @@
     <string name="batch_row_details">%1$s · произв. %2$s · изт. %3$s</string>
     <string name="no_date">—</string>
     <string name="expiry_warning">Изтекла или изтича скоро</string>
+    <string name="expired_on">Изтекла на %1$s</string>
+    <string name="expires_today">Изтича днес</string>
+    <string name="expires_tomorrow">Изтича утре</string>
+    <string name="no_expiry_date">Без срок на годност</string>
+    <string name="ingredients_used_label">Използвани съставки</string>
+    <string name="not_produced_here">Този артикул не се произвежда тук.</string>
+    <string name="not_made_with_app">Тази партида не е направена с това приложение, затова съставките ѝ не са известни.</string>
+    <string name="no_ingredients">Няма записани партиди на съставки.</string>
+    <plurals name="expires_in_days_banner">
+        <item quantity="one">Изтича след %1$d ден</item>
+        <item quantity="other">Изтича след %1$d дни</item>
+    </plurals>
 </resources>

@@ -29,7 +29,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
@@ -39,7 +38,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.toRoute
 import bg.butcher.pda.MainApplication
 import bg.butcher.pda.R
 import bg.butcher.pda.hardware.ScannedCode
@@ -49,6 +47,9 @@ import bg.butcher.pda.ui.components.BatchDialogState
 import bg.butcher.pda.ui.components.BatchDialogStateSaver
 import bg.butcher.pda.ui.components.BatchInput
 import bg.butcher.pda.ui.components.OnScan
+import bg.butcher.pda.ui.screens.DetailsScreen
+import bg.butcher.pda.ui.screens.DetailsUiEffect
+import bg.butcher.pda.ui.screens.DetailsViewModel
 import bg.butcher.pda.ui.screens.FormScreen
 import bg.butcher.pda.ui.screens.FormUiEffect
 import bg.butcher.pda.ui.screens.FormViewModel
@@ -197,7 +198,7 @@ fun MainApp(
                         onRemoveBatch = { itemCode, batchNumber -> viewModel.removeBatch(itemCode, batchNumber) },
                         onSubmit = viewModel::submit,
                         onRetry = viewModel::reloadBomDetails,
-                        onScanAccepted = scanFeedback::accepted,
+                        onScanResult = { accepted -> if (accepted) scanFeedback.accepted() else scanFeedback.failed() },
                         modifier = Modifier.fillMaxSize()
                     )
                 }
@@ -239,7 +240,11 @@ fun MainApp(
                     LaunchedEffect(viewModel) {
                         viewModel.effects.collect { effect ->
                             when (effect) {
-                                is SearchUiEffect.ShowDetails -> open(effect.batch)
+                                is SearchUiEffect.ShowDetails -> {
+                                    if (effect.fromScan) scanFeedback.accepted()
+                                    open(effect.batch)
+                                }
+                                SearchUiEffect.ScanRejected -> scanFeedback.failed()
                             }
                         }
                     }
@@ -263,16 +268,39 @@ fun MainApp(
                         modifier = Modifier.fillMaxSize()
                     )
                 }
-                // Placeholder until the real Details screen (Step 6.4)
-                composable<Details> { entry ->
-                    val details = entry.toRoute<Details>()
-                    // Replaces this page, so Back always goes to Search
-                    OnScan { raw ->
-                        (parseScan(raw) as? ScannedCode.Batch)?.let {
-                            navController.navigate(Details(it.number)) { popUpTo<Details> { inclusive = true } }
+                composable<Details> {
+                    val viewModel: DetailsViewModel = viewModel(factory = DetailsViewModel.Factory)
+                    val state by viewModel.uiState.collectAsState()
+                    val context = LocalContext.current
+                    LaunchedEffect(viewModel) {
+                        viewModel.effects.collect { effect ->
+                            when (effect) {
+                                // Replaces this page, so Back always goes to Search
+                                // Only scans replace this page
+                                is DetailsUiEffect.ShowDetails -> {
+                                    scanFeedback.accepted()
+                                    navController.navigate(Details(effect.batch)) { popUpTo<Details> { inclusive = true } }
+                                }
+                                is DetailsUiEffect.ShowToast -> {
+                                    if (effect.rejected) scanFeedback.failed()
+                                    Toast.makeText(context, effect.messageResId, Toast.LENGTH_SHORT).show()
+                                }
+                            }
                         }
                     }
-                    Text(details.batch, modifier = Modifier.padding(20.dp))
+                    OnScan(
+                        onNoRead = {
+                            scanFeedback.failed()
+                            Toast.makeText(context, R.string.scan_no_read, Toast.LENGTH_SHORT).show()
+                        },
+                        onScan = viewModel::onScan,
+                    )
+                    DetailsScreen(
+                        state = state,
+                        onRetry = viewModel::loadBatch,
+                        onRetryIngredients = viewModel::retryIngredients,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
             }
         }

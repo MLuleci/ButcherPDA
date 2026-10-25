@@ -127,7 +127,7 @@ class SearchViewModelTest {
         vm.onScan("https://erp.example.bg/app/batch/pork_sausageS001")
         advanceUntilIdle()
 
-        assertEquals(listOf(SearchUiEffect.ShowDetails("PORK_SAUSAGES001")), effects)
+        assertEquals(listOf(SearchUiEffect.ShowDetails("PORK_SAUSAGES001", fromScan = true)), effects)
     }
 
     @Test
@@ -142,7 +142,7 @@ class SearchViewModelTest {
 
         vm.onScan("https://example.com/not-a-batch")
         assertEquals(SearchLookupError.NotABatchLabel, vm.uiState.value.lookupError)
-        assertTrue(effects.isEmpty())
+        assertEquals(listOf(SearchUiEffect.ScanRejected, SearchUiEffect.ScanRejected), effects)
     }
 
     @Test
@@ -151,6 +151,7 @@ class SearchViewModelTest {
         val effects = effectsOf(vm)
         advanceUntilIdle()
 
+        // Not a scan, so a miss isn't rejected either
         vm.setQuery("saus")
         vm.onSubmit()
         advanceUntilIdle()

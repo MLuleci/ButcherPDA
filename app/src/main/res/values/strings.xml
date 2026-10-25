@@ -100,4 +100,16 @@
     <string name="batch_row_details">%1$s · prod. %2$s · exp. %3$s</string>
     <string name="no_date">—</string>
     <string name="expiry_warning">Expired or expiring soon</string>
+    <string name="expired_on">Expired on %1$s</string>
+    <string name="expires_today">Expires today</string>
+    <string name="expires_tomorrow">Expires tomorrow</string>
+    <string name="no_expiry_date">No expiry date</string>
+    <string name="ingredients_used_label">Ingredients used</string>
+    <string name="not_produced_here">This item isn\'t produced here.</string>
+    <string name="not_made_with_app">This batch wasn\'t made with this app, so its ingredients aren\'t known.</string>
+    <string name="no_ingredients">No ingredient batches recorded.</string>
+    <plurals name="expires_in_days_banner">
+        <item quantity="one">Expires in %1$d day</item>
+        <item quantity="other">Expires in %1$d days</item>
+    </plurals>
 </resources>

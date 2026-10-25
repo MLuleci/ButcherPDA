@@ -64,7 +64,8 @@ fun BatchDialog(
     lookupBatch: suspend (String) -> NetworkState<BatchMatch, BatchLookupError>,
     onSubmit: (itemCode: String, batchNumber: String, quantity: Double) -> Unit,
     onDismiss: () -> Unit,
-    onScanAccepted: () -> Unit = {},
+    // Once per scan: whether the scanned code was accepted. Not called when the server couldn't be reached.
+    onScanResult: (accepted: Boolean) -> Unit = {},
 ) {
     val editing = (state as? BatchDialogState.Editing)?.batch
     val input = (state as? BatchDialogState.Adding)?.input
@@ -79,6 +80,7 @@ fun BatchDialog(
         if (input == null) return@LaunchedEffect
         if (input.unrecognised) {
             lookup = NetworkState.Error(BatchLookupError.NotABatchLabel)
+            onScanResult(false)
             return@LaunchedEffect
         }
         val number = input.text.trim()
@@ -87,9 +89,14 @@ fun BatchDialog(
         lookup = NetworkState.Loading
         val result = lookupBatch(number)
         lookup = result
-        if (result is NetworkState.Success) {
-            if (input.fromScan) onScanAccepted()
-            if (!quantityTyped) quantityText = result.data.prefill?.let { formatDecimal(it) }.orEmpty()
+        if (input.fromScan) {
+            when {
+                result is NetworkState.Success -> onScanResult(true)
+                result is NetworkState.Error && result.error !is BatchLookupError.Failed -> onScanResult(false)
+            }
+        }
+        if (result is NetworkState.Success && !quantityTyped) {
+            quantityText = result.data.prefill?.let { formatDecimal(it) }.orEmpty()
         }
     }
 

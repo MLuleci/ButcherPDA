@@ -20,20 +20,13 @@ import androidx.compose.ui.unit.dp
 import bg.butcher.pda.R
 import bg.butcher.pda.model.ManufactureEntry
 import bg.butcher.pda.network.NetworkState
+import bg.butcher.pda.ui.components.LabelledValue
 import bg.butcher.pda.ui.components.SubmitButton
 import bg.butcher.pda.ui.theme.AppTheme
 import bg.butcher.pda.util.formatDate
 import bg.butcher.pda.util.formatDecimal
-import kotlinx.datetime.LocalDate
 import java.text.DateFormat
-
-@Composable
-private fun SummaryLine(label: String, value: String) {
-    Column {
-        Text(text = label, style = MaterialTheme.typography.labelMedium)
-        Text(text = value, style = MaterialTheme.typography.bodyLarge)
-    }
-}
+import kotlinx.datetime.LocalDate
 
 @Composable
 fun SummaryScreen(
@@ -53,15 +46,15 @@ fun SummaryScreen(
                 .padding(20.dp)
         ) {
             Text(text = entry.itemName, style = MaterialTheme.typography.titleLarge)
-            SummaryLine(stringResource(R.string.batch_label), entry.batchNumber)
-            SummaryLine(
+            LabelledValue(stringResource(R.string.batch_label), entry.batchNumber)
+            LabelledValue(
                 stringResource(R.string.quantity_label),
                 stringResource(R.string.quantity_with_unit, formatDecimal(entry.quantity), entry.uom),
             )
-            SummaryLine(stringResource(R.string.production_date_label), formatDate(entry.productionDate, DateFormat.LONG))
-            SummaryLine(stringResource(R.string.expiry_date_label), formatDate(entry.expiryDate, DateFormat.LONG))
+            LabelledValue(stringResource(R.string.production_date_label), formatDate(entry.productionDate, DateFormat.LONG))
+            LabelledValue(stringResource(R.string.expiry_date_label), formatDate(entry.expiryDate, DateFormat.LONG))
             Text(stringResource(if (entry.isFinished) R.string.finished_summary else R.string.not_finished_label))
-            SummaryLine(stringResource(R.string.stock_entry_label), entry.stockEntryId)
+            LabelledValue(stringResource(R.string.stock_entry_label), entry.stockEntryId)
         }
         Column(
             verticalArrangement = Arrangement.spacedBy(10.dp),

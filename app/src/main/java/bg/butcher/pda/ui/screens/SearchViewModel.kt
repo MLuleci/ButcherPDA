@@ -52,7 +52,10 @@ data class SearchUiState(
 )
 
 sealed interface SearchUiEffect {
-    data class ShowDetails(val batch: String) : SearchUiEffect
+    data class ShowDetails(val batch: String, val fromScan: Boolean = false) : SearchUiEffect
+
+    /** The scanned code isn't a known batch. */
+    data object ScanRejected : SearchUiEffect
 }
 
 private object Saved {
@@ -140,24 +143,28 @@ class SearchViewModel(private val erpRepository: ErpRepository, private val save
     /** A scan opens its batch whatever the filters; anything else shows an error under the field. */
     fun onScan(raw: String) {
         when (val code = parseScan(raw)) {
-            is ScannedCode.Batch -> lookUp(code.number)
-            is ScannedCode.Unrecognised -> _uiState.update { it.copy(lookupError = SearchLookupError.NotABatchLabel) }
+            is ScannedCode.Batch -> lookUp(code.number, fromScan = true)
+            is ScannedCode.Unrecognised -> {
+                _uiState.update { it.copy(lookupError = SearchLookupError.NotABatchLabel) }
+                _effects.trySend(SearchUiEffect.ScanRejected)
+            }
         }
     }
 
     /** Enter: open the text as an exact batch number if there is one, and otherwise keep the list. */
     fun onSubmit() {
         val text = _uiState.value.query.trim()
-        if (text.isNotEmpty()) lookUp(text, keepListOnMiss = true)
+        if (text.isNotEmpty()) lookUp(text, fromScan = false)
     }
 
-    private fun lookUp(batchNumber: String, keepListOnMiss: Boolean = false) {
+    /** A miss on Enter keeps the list without an error, since the text may be part of a name. */
+    private fun lookUp(batchNumber: String, fromScan: Boolean) {
         lookupJob.replace {
             _uiState.update { it.copy(lookingUp = true, lookupError = null) }
             erpRepository.getBatch(batchNumber)
                 .onSuccess { batch ->
                     _uiState.update { it.copy(lookingUp = false) }
-                    _effects.send(SearchUiEffect.ShowDetails(batch.name))
+                    _effects.send(SearchUiEffect.ShowDetails(batch.name, fromScan))
                 }
                 .onFailure { e ->
                     val error = ErpError.from(e)
@@ -166,12 +173,13 @@ class SearchViewModel(private val erpRepository: ErpRepository, private val save
                         it.copy(
                             lookingUp = false,
                             lookupError = when {
-                                notFound && keepListOnMiss -> null
+                                notFound && !fromScan -> null
                                 notFound -> SearchLookupError.NotFound
                                 else -> SearchLookupError.Failed(error)
                             },
                         )
                     }
+                    if (notFound && fromScan) _effects.send(SearchUiEffect.ScanRejected)
                 }
         }
     }
