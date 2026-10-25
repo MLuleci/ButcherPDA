@@ -31,7 +31,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import bg.butcher.pda.R
 import bg.butcher.pda.model.BatchDetails
@@ -45,7 +44,8 @@ import bg.butcher.pda.ui.components.ErrorMessage
 import bg.butcher.pda.ui.components.SearchField
 import bg.butcher.pda.ui.components.errorText
 import bg.butcher.pda.ui.components.orderLabel
-import bg.butcher.pda.ui.theme.AppTheme
+import bg.butcher.pda.ui.theme.PreviewTheme
+import bg.butcher.pda.ui.theme.ThemePreviews
 import bg.butcher.pda.util.today
 import kotlinx.datetime.LocalDate
 import java.io.IOException
@@ -195,7 +195,7 @@ private val previewBatches = listOf(
 
 @Composable
 private fun SearchScreenPreview(state: SearchUiState) {
-    AppTheme {
+    PreviewTheme {
         SearchScreen(
             state = state,
             onQueryChange = {},
@@ -212,15 +212,15 @@ private fun SearchScreenPreview(state: SearchUiState) {
     }
 }
 
-@Preview(showBackground = true)
+@ThemePreviews
 @Composable
-fun SearchScreen_Results_Preview() {
+private fun SearchScreen_Results_Preview() {
     SearchScreenPreview(SearchUiState(results = NetworkState.Success(previewBatches), canLoadMore = true))
 }
 
-@Preview(showBackground = true)
+@ThemePreviews
 @Composable
-fun SearchScreen_NoResults_Preview() {
+private fun SearchScreen_NoResults_Preview() {
     SearchScreenPreview(
         SearchUiState(
             query = "beef",
@@ -231,8 +231,8 @@ fun SearchScreen_NoResults_Preview() {
     )
 }
 
-@Preview(showBackground = true)
+@ThemePreviews
 @Composable
-fun SearchScreen_Error_Preview() {
+private fun SearchScreen_Error_Preview() {
     SearchScreenPreview(SearchUiState(results = NetworkState.Error(ErpError.Network(IOException()))))
 }

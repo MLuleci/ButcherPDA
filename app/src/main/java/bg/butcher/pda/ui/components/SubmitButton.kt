@@ -8,9 +8,9 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import bg.butcher.pda.ui.theme.AppTheme
+import bg.butcher.pda.ui.theme.PreviewTheme
+import bg.butcher.pda.ui.theme.ThemePreviews
 
 /** The page's main action, as tall as the outlined buttons beside it. */
 @Composable
@@ -37,18 +37,18 @@ fun SubmitButton(
     }
 }
 
-@Preview(showBackground = true)
+@ThemePreviews
 @Composable
-fun SubmitButton_Preview() {
-    AppTheme {
+private fun SubmitButton_Preview() {
+    PreviewTheme {
         SubmitButton(label = "Submit", onClick = {})
     }
 }
 
-@Preview(showBackground = true)
+@ThemePreviews
 @Composable
-fun SubmitButton_Loading_Preview() {
-    AppTheme {
+private fun SubmitButton_Loading_Preview() {
+    PreviewTheme {
         SubmitButton(label = "Submit", onClick = {}, isLoading = true)
     }
 }

@@ -8,9 +8,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.tooling.preview.Preview
 import bg.butcher.pda.R
-import bg.butcher.pda.ui.theme.AppTheme
+import bg.butcher.pda.ui.theme.PreviewTheme
+import bg.butcher.pda.ui.theme.ThemePreviews
 import bg.butcher.pda.util.dateFromToday
 import bg.butcher.pda.util.formatDate
 
@@ -52,10 +52,10 @@ fun ExpiryInput(
     )
 }
 
-@Preview(showBackground = true)
+@ThemePreviews
 @Composable
-fun ExpiryInputPreview() {
-    AppTheme {
+private fun ExpiryInputPreview() {
+    PreviewTheme {
         ExpiryInput(
             value = "5",
             onValueChange = {},
@@ -63,10 +63,10 @@ fun ExpiryInputPreview() {
     }
 }
 
-@Preview(showBackground = true)
+@ThemePreviews
 @Composable
-fun ExpiryInput_Overridden_Preview() {
-    AppTheme {
+private fun ExpiryInput_Overridden_Preview() {
+    PreviewTheme {
         ExpiryInput(
             value = "3",
             onValueChange = {},

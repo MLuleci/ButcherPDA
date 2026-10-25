@@ -6,6 +6,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
@@ -23,6 +24,8 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import bg.butcher.pda.R
+import bg.butcher.pda.ui.theme.PreviewTheme
+import bg.butcher.pda.ui.theme.ThemePreviews
 
 @Composable
 fun SearchField(
@@ -62,5 +65,21 @@ fun SearchField(
         if (requestFocus) {
             focusRequester.requestFocus()
         }
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun SearchField_Empty_Preview() {
+    PreviewTheme {
+        SearchField(rememberTextFieldState())
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun SearchField_Text_Preview() {
+    PreviewTheme {
+        SearchField(rememberTextFieldState("saus"))
     }
 }

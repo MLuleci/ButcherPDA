@@ -37,13 +37,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import bg.butcher.pda.R
 import bg.butcher.pda.model.BomSearchResultItem
 import bg.butcher.pda.network.ErpError
 import bg.butcher.pda.network.NetworkState
-import bg.butcher.pda.ui.theme.AppTheme
+import bg.butcher.pda.ui.theme.PreviewTheme
+import bg.butcher.pda.ui.theme.ThemePreviews
 import kotlinx.coroutines.launch
 
 @Composable
@@ -208,18 +208,18 @@ private val previewResults = listOf(
     BomSearchResultItem("BOM.003", "SKU.003", "Kebabs", "Kgs", 0),
 )
 
-@Preview(showBackground = true)
+@ThemePreviews
 @Composable
-fun BomSelect_None_Preview() {
-    AppTheme {
+private fun BomSelect_None_Preview() {
+    PreviewTheme {
         BomSelect(onQueryChanged = {}, onItemSelected = {}, selectedItem = null, searchState = NetworkState.Idle)
     }
 }
 
-@Preview(showBackground = true)
+@ThemePreviews
 @Composable
-fun BomSelect_Some_Preview() {
-    AppTheme {
+private fun BomSelect_Some_Preview() {
+    PreviewTheme {
         BomSelect(
             onQueryChanged = {},
             onItemSelected = {},
@@ -229,10 +229,10 @@ fun BomSelect_Some_Preview() {
     }
 }
 
-@Preview(showBackground = true)
+@ThemePreviews
 @Composable
-fun BomResultRow_Selected_Preview() {
-    AppTheme {
+private fun BomResultRow_Selected_Preview() {
+    PreviewTheme {
         Column {
             BomResultRow(previewResults[0], selected = true, striped = false, onClick = {})
             BomResultRow(previewResults[1], selected = false, striped = true, onClick = {})
@@ -240,26 +240,26 @@ fun BomResultRow_Selected_Preview() {
     }
 }
 
-@Preview(showBackground = true)
+@ThemePreviews
 @Composable
-fun BomSearch_Idle_Preview() {
-    AppTheme {
+private fun BomSearch_Idle_Preview() {
+    PreviewTheme {
         BomSearch(onQueryChanged = {}, onSelect = {}, searchState = NetworkState.Idle)
     }
 }
 
-@Preview(showBackground = true)
+@ThemePreviews
 @Composable
-fun BomSearch_Pending_Preview() {
-    AppTheme {
+private fun BomSearch_Pending_Preview() {
+    PreviewTheme {
         BomSearch(onQueryChanged = {}, onSelect = {}, searchState = NetworkState.Loading)
     }
 }
 
-@Preview(showBackground = true)
+@ThemePreviews
 @Composable
-fun BomSearch_Error_Preview() {
-    AppTheme {
+private fun BomSearch_Error_Preview() {
+    PreviewTheme {
         BomSearch(
             onQueryChanged = {},
             onSelect = {},
@@ -268,18 +268,18 @@ fun BomSearch_Error_Preview() {
     }
 }
 
-@Preview(showBackground = true)
+@ThemePreviews
 @Composable
-fun BomSearch_NoResults_Preview() {
-    AppTheme {
+private fun BomSearch_NoResults_Preview() {
+    PreviewTheme {
         BomSearch(onQueryChanged = {}, onSelect = {}, searchState = NetworkState.Success(emptyList()))
     }
 }
 
-@Preview(showBackground = true)
+@ThemePreviews
 @Composable
-fun BomSearch_ResultList_Preview() {
-    AppTheme {
+private fun BomSearch_ResultList_Preview() {
+    PreviewTheme {
         BomSearch(onQueryChanged = {}, onSelect = {}, searchState = NetworkState.Success(previewResults))
     }
 }

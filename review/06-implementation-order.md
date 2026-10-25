@@ -483,6 +483,7 @@ The design is in 2.14 (summary). Search and Details only need Phase 1 (the netwo
 **Implementation notes:**
 - **From the device:** the Home buttons are larger. The pages' main buttons (Continue, Submit, Done, Save) are at least 56 dp tall, like the outlined buttons beside them. Checkbox labels toggle their checkbox (`CheckboxRow`, shared with the filter sheet).
 - **Ingredient table:** the swipes are gone. Each batch row has 48 dp Edit and Delete buttons, with the quantity and unit under the batch number. The column header is gone too, since the rows explain themselves, and `amount_label` with it. There's still no delete confirmation.
+- **Previews:** `@ThemePreviews` shows each preview in the light and dark theme, and `PreviewTheme` uses the app's own colours (the PDA's Android 6 has no dynamic colour) on a surface. All previews are `private`. New ones: `IngredientTable` (every coverage colour, and a whole-number ingredient), `ErrorMessage`, `SearchField`, `ConfirmCancelButtons`, `CheckboxRow`, `LabelledValue` and `SettingsScreen`. `SettingsScreen` now takes its state and callbacks, and its route holds the ViewModel, like the other screens. `BatchDialog` and `BatchFilterSheet` have none: they're in their own windows, which previews don't show well.
 
 ---
 

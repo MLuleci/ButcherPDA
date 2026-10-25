@@ -18,7 +18,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import bg.butcher.pda.R
 import bg.butcher.pda.model.BomDetails
@@ -34,7 +33,8 @@ import bg.butcher.pda.ui.components.IngredientLine
 import bg.butcher.pda.ui.components.IngredientTable
 import bg.butcher.pda.ui.components.SubmitButton
 import bg.butcher.pda.ui.components.errorText
-import bg.butcher.pda.ui.theme.AppTheme
+import bg.butcher.pda.ui.theme.PreviewTheme
+import bg.butcher.pda.ui.theme.ThemePreviews
 import bg.butcher.pda.util.formatDecimal
 import java.io.IOException
 
@@ -183,7 +183,7 @@ private val previewBom = BomDetails(
 
 @Composable
 private fun FormScreenPreview(state: FormUiState) {
-    AppTheme {
+    PreviewTheme {
         FormScreen(
             state = state,
             dialog = null,
@@ -199,9 +199,9 @@ private fun FormScreenPreview(state: FormUiState) {
     }
 }
 
-@Preview(showBackground = true)
+@ThemePreviews
 @Composable
-fun FormScreen_Preview() {
+private fun FormScreen_Preview() {
     FormScreenPreview(
         FormUiState(
             fetchState = NetworkState.Success(previewBom),
@@ -215,9 +215,9 @@ fun FormScreen_Preview() {
     )
 }
 
-@Preview(showBackground = true)
+@ThemePreviews
 @Composable
-fun FormScreen_SubmitUnknown_Preview() {
+private fun FormScreen_SubmitUnknown_Preview() {
     FormScreenPreview(
         FormUiState(
             fetchState = NetworkState.Success(previewBom),
@@ -233,8 +233,8 @@ fun FormScreen_SubmitUnknown_Preview() {
     )
 }
 
-@Preview(showBackground = true)
+@ThemePreviews
 @Composable
-fun FormScreen_FetchError_Preview() {
+private fun FormScreen_FetchError_Preview() {
     FormScreenPreview(FormUiState(fetchState = NetworkState.Error(ErpError.Network(IOException()))))
 }

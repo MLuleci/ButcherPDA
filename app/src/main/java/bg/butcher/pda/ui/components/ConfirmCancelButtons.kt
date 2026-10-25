@@ -10,6 +10,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import bg.butcher.pda.ui.theme.PreviewTheme
+import bg.butcher.pda.ui.theme.ThemePreviews
 
 @Composable
 fun ConfirmCancelButtons(
@@ -30,5 +32,27 @@ fun ConfirmCancelButtons(
         Button(onClick = onConfirm, enabled = confirmEnabled, modifier = Modifier.weight(1f).heightIn(min = 56.dp)) {
             Text(confirmLabel)
         }
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun ConfirmCancelButtons_Preview() {
+    PreviewTheme {
+        ConfirmCancelButtons(confirmLabel = "Select", cancelLabel = "Cancel", onConfirm = {}, onCancel = {})
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun ConfirmCancelButtons_Disabled_Preview() {
+    PreviewTheme {
+        ConfirmCancelButtons(
+            confirmLabel = "Select",
+            cancelLabel = "Cancel",
+            onConfirm = {},
+            onCancel = {},
+            confirmEnabled = false,
+        )
     }
 }

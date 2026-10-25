@@ -6,6 +6,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -31,6 +32,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import bg.butcher.pda.R
 import bg.butcher.pda.ui.screens.Coverage
+import bg.butcher.pda.ui.theme.PreviewTheme
+import bg.butcher.pda.ui.theme.ThemePreviews
 import bg.butcher.pda.util.formatDecimal
 
 data class TableParameters(
@@ -214,5 +217,31 @@ fun IngredientTable(
                 }
             }
         }
+    }
+}
+
+private val previewIngredients = listOf(
+    IngredientLine("BEEF", "Beef", "Kg", 4.0, 4.1, Coverage.OK, 3.8..4.2, null),
+    IngredientLine("SPICE", "Spice", "Kg", 0.8, 0.5, Coverage.UNDER, 0.76..0.84, null),
+    IngredientLine("ONION", "Onion", "Kg", 12.0, 14.0, Coverage.OVER, 11.4..12.6, null),
+    // Whole numbers: "use 2–3" rather than the limits
+    IngredientLine("CASING", "Casing", "Nos", 2.5, 0.0, Coverage.MISSING, 2.0..3.0, 2L..3L),
+)
+
+@ThemePreviews
+@Composable
+private fun IngredientTable_Preview() {
+    PreviewTheme {
+        IngredientTable(
+            ingredients = previewIngredients,
+            batches = mapOf(
+                "BEEF" to mapOf("BEEF.0001" to 2.5, "BEEF.0002" to 1.6),
+                "SPICE" to mapOf("SPICE.0001" to 0.5),
+                "ONION" to mapOf("ONION.0001" to 14.0),
+            ),
+            onEdit = {},
+            onDelete = { _, _ -> },
+            modifier = Modifier.height(480.dp),
+        )
     }
 }

@@ -22,7 +22,6 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import bg.butcher.pda.R
 import bg.butcher.pda.model.BomSearchResultItem
@@ -32,7 +31,8 @@ import bg.butcher.pda.ui.components.CheckboxRow
 import bg.butcher.pda.ui.components.ExpiryInput
 import bg.butcher.pda.ui.components.QuantityInput
 import bg.butcher.pda.ui.components.SubmitButton
-import bg.butcher.pda.ui.theme.AppTheme
+import bg.butcher.pda.ui.theme.PreviewTheme
+import bg.butcher.pda.ui.theme.ThemePreviews
 import bg.butcher.pda.util.formatDecimal
 import kotlinx.coroutines.flow.first
 
@@ -139,7 +139,7 @@ private val previewBom = BomSearchResultItem(
 
 @Composable
 private fun StartScreenPreview(state: FormUiState) {
-    AppTheme {
+    PreviewTheme {
         StartScreen(
             state = state,
             onQueryChanged = {},
@@ -154,23 +154,23 @@ private fun StartScreenPreview(state: FormUiState) {
     }
 }
 
-@Preview(showBackground = true)
+@ThemePreviews
 @Composable
-fun StartScreen_Empty_Preview() {
+private fun StartScreen_Empty_Preview() {
     StartScreenPreview(FormUiState())
 }
 
-@Preview(showBackground = true)
+@ThemePreviews
 @Composable
-fun StartScreen_Selected_Preview() {
+private fun StartScreen_Selected_Preview() {
     StartScreenPreview(
         FormUiState(selectedItem = previewBom, quantityText = "100", expiryDaysText = "5", expiryTyped = true)
     )
 }
 
-@Preview(showBackground = true)
+@ThemePreviews
 @Composable
-fun StartScreen_Loading_Preview() {
+private fun StartScreen_Loading_Preview() {
     StartScreenPreview(
         FormUiState(
             selectedItem = previewBom,

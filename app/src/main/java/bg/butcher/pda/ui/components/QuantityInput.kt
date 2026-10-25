@@ -9,9 +9,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.tooling.preview.Preview
 import bg.butcher.pda.R
-import bg.butcher.pda.ui.theme.AppTheme
+import bg.butcher.pda.ui.theme.PreviewTheme
+import bg.butcher.pda.ui.theme.ThemePreviews
 import bg.butcher.pda.util.validateQuantity
 
 @Composable
@@ -52,10 +52,10 @@ fun QuantityInput(
     )
 }
 
-@Preview(showBackground = true)
+@ThemePreviews
 @Composable
-fun QuantityInput_Valid_Preview() {
-    AppTheme {
+private fun QuantityInput_Valid_Preview() {
+    PreviewTheme {
         QuantityInput(
             value = "12.3",
             onValueChange = {},
@@ -65,10 +65,10 @@ fun QuantityInput_Valid_Preview() {
     }
 }
 
-@Preview(showBackground = true)
+@ThemePreviews
 @Composable
-fun QuantityInput_WholeNumber_Preview() {
-    AppTheme {
+private fun QuantityInput_WholeNumber_Preview() {
+    PreviewTheme {
         QuantityInput(
             value = "2.5",
             onValueChange = {},
@@ -78,10 +78,10 @@ fun QuantityInput_WholeNumber_Preview() {
     }
 }
 
-@Preview(showBackground = true)
+@ThemePreviews
 @Composable
-fun QuantityInput_Invalid_Preview() {
-    AppTheme {
+private fun QuantityInput_Invalid_Preview() {
+    PreviewTheme {
         QuantityInput(
             value = "",
             onValueChange = {},
@@ -91,10 +91,10 @@ fun QuantityInput_Invalid_Preview() {
     }
 }
 
-@Preview(showBackground = true)
+@ThemePreviews
 @Composable
-fun QuantityInput_NoUOM_Preview() {
-    AppTheme {
+private fun QuantityInput_NoUOM_Preview() {
+    PreviewTheme {
         QuantityInput(
             value = "12.3",
             onValueChange = {},

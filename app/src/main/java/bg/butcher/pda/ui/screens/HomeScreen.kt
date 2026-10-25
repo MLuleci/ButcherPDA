@@ -23,13 +23,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import bg.butcher.pda.R
 import bg.butcher.pda.ui.BatchesGraph
 import bg.butcher.pda.ui.ManufactureGraph
 import bg.butcher.pda.ui.Settings as SettingsRoute
-import bg.butcher.pda.ui.theme.AppTheme
+import bg.butcher.pda.ui.theme.PreviewTheme
+import bg.butcher.pda.ui.theme.ThemePreviews
 
 data class NavButton(
     val route: Any,
@@ -78,10 +78,10 @@ fun HomeScreen(
     }
 }
 
-@Preview(showBackground = true)
+@ThemePreviews
 @Composable
-fun HomeScreenPreview() {
-    AppTheme {
+private fun HomeScreenPreview() {
+    PreviewTheme {
         HomeScreen()
     }
 }

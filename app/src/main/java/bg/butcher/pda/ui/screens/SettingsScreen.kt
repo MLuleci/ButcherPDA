@@ -2,6 +2,7 @@ package bg.butcher.pda.ui.screens
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -15,7 +16,6 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,12 +28,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import bg.butcher.pda.R
 import bg.butcher.pda.data.PaperSize
 import bg.butcher.pda.data.PaperType
 import bg.butcher.pda.data.labelHeightRange
 import bg.butcher.pda.ui.components.SubmitButton
+import bg.butcher.pda.ui.theme.PreviewTheme
+import bg.butcher.pda.ui.theme.ThemePreviews
 
 @Composable
 fun ValidatedTextField(
@@ -130,16 +131,21 @@ private fun <T> OptionSelect(
 
 @Composable
 fun SettingsScreen(
+    uiState: SettingsUiState,
+    onBaseUrlChange: (String) -> Unit,
+    onApiKeyChange: (String) -> Unit,
+    onPaperSizeChange: (PaperSize) -> Unit,
+    onPaperTypeChange: (PaperType) -> Unit,
+    onLabelHeightChange: (String) -> Unit,
+    onSave: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory),
 ) {
-    val uiState by viewModel.uiState.collectAsState()
     Column(modifier = modifier.verticalScroll(rememberScrollState())) {
         ValidatedTextField(
             label = stringResource(R.string.base_url_label),
             error = stringResource(R.string.invalid_base_url),
             state = uiState.baseUrl,
-            onChanged = { viewModel.setBaseUrl(it) },
+            onChanged = onBaseUrlChange,
             enabled = uiState.isLoaded,
             placeholder = "https://erp.example.com",
             keyboardType = KeyboardType.Uri,
@@ -148,7 +154,7 @@ fun SettingsScreen(
             label = stringResource(R.string.api_key_label),
             error = stringResource(R.string.invalid_api_key),
             state = uiState.apiKey,
-            onChanged = { viewModel.setApiKey(it) },
+            onChanged = onApiKeyChange,
             enabled = uiState.isLoaded,
             placeholder = "api_key:api_secret",
             keyboardType = KeyboardType.Password,
@@ -159,7 +165,7 @@ fun SettingsScreen(
             options = PaperSize.entries,
             selected = uiState.paperSize,
             optionLabel = { it.label() },
-            onSelect = viewModel::setPaperSize,
+            onSelect = onPaperSizeChange,
             enabled = uiState.isLoaded,
         )
         OptionSelect(
@@ -167,7 +173,7 @@ fun SettingsScreen(
             options = PaperType.entries,
             selected = uiState.paperType,
             optionLabel = { it.label() },
-            onSelect = viewModel::setPaperType,
+            onSelect = onPaperTypeChange,
             enabled = uiState.isLoaded,
         )
         val heightRange = labelHeightRange(uiState.paperType)
@@ -175,18 +181,64 @@ fun SettingsScreen(
             label = stringResource(R.string.label_height_label),
             error = stringResource(R.string.invalid_label_height, heightRange.first, heightRange.last),
             state = uiState.labelHeight,
-            onChanged = { viewModel.setLabelHeight(it) },
+            onChanged = onLabelHeightChange,
             enabled = uiState.isLoaded,
             keyboardType = KeyboardType.Number,
             suffix = stringResource(R.string.millimetres),
         )
         SubmitButton(
             label = stringResource(R.string.save_label),
-            onClick = { viewModel.save() },
+            onClick = onSave,
             enabled = uiState.canSave,
             modifier = Modifier
                 .align(Alignment.CenterHorizontally)
                 .padding(vertical = 10.dp)
         )
     }
+}
+
+@Composable
+private fun SettingsScreenPreview(uiState: SettingsUiState) {
+    PreviewTheme {
+        SettingsScreen(
+            uiState = uiState,
+            onBaseUrlChange = {},
+            onApiKeyChange = {},
+            onPaperSizeChange = {},
+            onPaperTypeChange = {},
+            onLabelHeightChange = {},
+            onSave = {},
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun SettingsScreen_Preview() {
+    SettingsScreenPreview(
+        SettingsUiState(
+            isLoaded = true,
+            isDirty = true,
+            baseUrl = SettingState("https://erp.example.bg", isValid = true),
+            apiKey = SettingState("key:secret", isValid = true),
+            paperType = PaperType.CONTINUOUS,
+            labelHeight = SettingState("40", isValid = true),
+        )
+    )
+}
+
+@ThemePreviews
+@Composable
+private fun SettingsScreen_Invalid_Preview() {
+    SettingsScreenPreview(
+        SettingsUiState(
+            isLoaded = true,
+            isDirty = true,
+            baseUrl = SettingState("http://erp.example.bg", isValid = false),
+            apiKey = SettingState("key", isValid = false),
+            paperType = PaperType.CONTINUOUS,
+            labelHeight = SettingState("30", isValid = false),
+        )
+    )
 }

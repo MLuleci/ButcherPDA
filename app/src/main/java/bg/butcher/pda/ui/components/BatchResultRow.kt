@@ -14,13 +14,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import bg.butcher.pda.R
 import bg.butcher.pda.model.BatchDetails
 import bg.butcher.pda.model.ExpiryStatus
 import bg.butcher.pda.model.expiryStatus
-import bg.butcher.pda.ui.theme.AppTheme
+import bg.butcher.pda.ui.theme.PreviewTheme
+import bg.butcher.pda.ui.theme.ThemePreviews
 import bg.butcher.pda.util.formatDecimal
 import bg.butcher.pda.util.shortDate
 import kotlinx.datetime.LocalDate
@@ -71,10 +71,10 @@ fun BatchResultRow(
     }
 }
 
-@Preview(showBackground = true)
+@ThemePreviews
 @Composable
-fun BatchResultRow_Preview() {
-    AppTheme {
+private fun BatchResultRow_Preview() {
+    PreviewTheme {
         BatchResultRow(
             batch = BatchDetails(
                 name = "PORK_SAUSAGE0012",

@@ -15,14 +15,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import bg.butcher.pda.R
 import bg.butcher.pda.model.ManufactureEntry
 import bg.butcher.pda.network.NetworkState
 import bg.butcher.pda.ui.components.LabelledValue
 import bg.butcher.pda.ui.components.SubmitButton
-import bg.butcher.pda.ui.theme.AppTheme
+import bg.butcher.pda.ui.theme.PreviewTheme
+import bg.butcher.pda.ui.theme.ThemePreviews
 import bg.butcher.pda.util.formatDate
 import bg.butcher.pda.util.formatDecimal
 import java.text.DateFormat
@@ -84,10 +84,10 @@ fun SummaryScreen(
     }
 }
 
-@Preview(showBackground = true)
+@ThemePreviews
 @Composable
-fun SummaryScreen_Preview() {
-    AppTheme {
+private fun SummaryScreen_Preview() {
+    PreviewTheme {
         SummaryScreen(
             entry = ManufactureEntry(
                 stockEntryId = "MAT-STE-2026-00012",

@@ -58,6 +58,7 @@ import bg.butcher.pda.ui.screens.SearchScreen
 import bg.butcher.pda.ui.screens.SearchUiEffect
 import bg.butcher.pda.ui.screens.SearchViewModel
 import bg.butcher.pda.ui.screens.SettingsScreen
+import bg.butcher.pda.ui.screens.SettingsViewModel
 import bg.butcher.pda.ui.screens.StartScreen
 import bg.butcher.pda.ui.screens.SummaryScreen
 import bg.butcher.pda.ui.screens.canFetch
@@ -125,7 +126,18 @@ fun MainApp(
                 )
             }
             composable<Settings> {
-                SettingsScreen(modifier = Modifier.fillMaxSize())
+                val viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory)
+                val state by viewModel.uiState.collectAsState()
+                SettingsScreen(
+                    uiState = state,
+                    onBaseUrlChange = viewModel::setBaseUrl,
+                    onApiKeyChange = viewModel::setApiKey,
+                    onPaperSizeChange = viewModel::setPaperSize,
+                    onPaperTypeChange = viewModel::setPaperType,
+                    onLabelHeightChange = viewModel::setLabelHeight,
+                    onSave = viewModel::save,
+                    modifier = Modifier.fillMaxSize()
+                )
             }
 
             navigation<ManufactureGraph>(startDestination = Start) {

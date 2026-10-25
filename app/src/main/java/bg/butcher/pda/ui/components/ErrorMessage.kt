@@ -16,6 +16,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import bg.butcher.pda.R
 import bg.butcher.pda.network.ErpError
+import bg.butcher.pda.ui.theme.PreviewTheme
+import bg.butcher.pda.ui.theme.ThemePreviews
+import java.io.IOException
 
 @Composable
 fun ErrorMessage(
@@ -45,5 +48,21 @@ fun ErrorMessage(
                 )
             }
         }
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun ErrorMessage_Retry_Preview() {
+    PreviewTheme {
+        ErrorMessage(error = ErpError.Network(IOException()), onRetry = {})
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun ErrorMessage_ServerMessage_Preview() {
+    PreviewTheme {
+        ErrorMessage(error = ErpError.Http(417, "Batch BEEF.0001 has expired"))
     }
 }

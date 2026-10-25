@@ -1,6 +1,7 @@
 package bg.butcher.pda.ui.components
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -14,6 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import bg.butcher.pda.R
+import bg.butcher.pda.ui.theme.PreviewTheme
+import bg.butcher.pda.ui.theme.ThemePreviews
 
 /** A checkbox with its label, where the whole row toggles it. */
 @Composable
@@ -32,5 +36,16 @@ fun CheckboxRow(
     ) {
         Checkbox(checked = checked, onCheckedChange = null)
         Text(stringResource(label), modifier = Modifier.padding(start = 12.dp))
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun CheckboxRow_Preview() {
+    PreviewTheme {
+        Column {
+            CheckboxRow(label = R.string.explode_label, checked = true, onCheckedChange = {})
+            CheckboxRow(label = R.string.finished_label, checked = false, onCheckedChange = {})
+        }
     }
 }

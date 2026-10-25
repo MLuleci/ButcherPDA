@@ -21,7 +21,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import bg.butcher.pda.R
 import bg.butcher.pda.model.BatchDetails
@@ -33,7 +32,8 @@ import bg.butcher.pda.network.NetworkState
 import bg.butcher.pda.ui.components.Centered
 import bg.butcher.pda.ui.components.ErrorMessage
 import bg.butcher.pda.ui.components.LabelledValue
-import bg.butcher.pda.ui.theme.AppTheme
+import bg.butcher.pda.ui.theme.PreviewTheme
+import bg.butcher.pda.ui.theme.ThemePreviews
 import bg.butcher.pda.util.formatDecimal
 import bg.butcher.pda.util.shortDate
 import bg.butcher.pda.util.today
@@ -187,7 +187,7 @@ private val previewBatch = BatchDetails(
 
 @Composable
 private fun DetailsScreenPreview(state: DetailsUiState) {
-    AppTheme {
+    PreviewTheme {
         DetailsScreen(
             state = state,
             onRetry = {},
@@ -199,9 +199,9 @@ private fun DetailsScreenPreview(state: DetailsUiState) {
     }
 }
 
-@Preview(showBackground = true)
+@ThemePreviews
 @Composable
-fun DetailsScreen_Preview() {
+private fun DetailsScreen_Preview() {
     DetailsScreenPreview(
         DetailsUiState(
             batchNumber = previewBatch.name,
@@ -219,9 +219,9 @@ fun DetailsScreen_Preview() {
     )
 }
 
-@Preview(showBackground = true)
+@ThemePreviews
 @Composable
-fun DetailsScreen_NotProducedHere_Preview() {
+private fun DetailsScreen_NotProducedHere_Preview() {
     DetailsScreenPreview(
         DetailsUiState(
             batchNumber = "BEEF.0001",
@@ -237,9 +237,9 @@ fun DetailsScreen_NotProducedHere_Preview() {
     )
 }
 
-@Preview(showBackground = true)
+@ThemePreviews
 @Composable
-fun DetailsScreen_IngredientsError_Preview() {
+private fun DetailsScreen_IngredientsError_Preview() {
     DetailsScreenPreview(
         DetailsUiState(
             batchNumber = previewBatch.name,
