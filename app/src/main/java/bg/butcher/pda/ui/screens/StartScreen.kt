@@ -8,11 +8,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
@@ -27,6 +34,7 @@ import bg.butcher.pda.ui.components.QuantityInput
 import bg.butcher.pda.ui.components.SubmitButton
 import bg.butcher.pda.ui.theme.AppTheme
 import bg.butcher.pda.util.formatDecimal
+import kotlinx.coroutines.flow.first
 
 @Composable
 private fun quantityTooSmallMessage(state: FormUiState): String? {
@@ -53,6 +61,17 @@ fun StartScreen(
 ) {
     val selected = state.selectedItem
     val quantityFocus = remember { FocusRequester() }
+    val windowInfo = LocalWindowInfo.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    // Counts picks, so picking again focuses the quantity again
+    var picks by remember { mutableIntStateOf(0) }
+    LaunchedEffect(picks) {
+        if (picks == 0) return@LaunchedEffect
+        // The sheet is its own window; the keyboard only opens once the screen's window has focus back
+        snapshotFlow { windowInfo.isWindowFocused }.first { it }
+        quantityFocus.requestFocus()
+        keyboard?.show()
+    }
     Column(modifier = modifier) {
         Column(
             verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -66,7 +85,7 @@ fun StartScreen(
                 onItemSelected = onItemSelected,
                 selectedItem = selected,
                 searchState = state.searchState,
-                onPicked = { quantityFocus.requestFocus() },
+                onPicked = { picks++ },
             )
             QuantityInput(
                 value = state.quantityText,

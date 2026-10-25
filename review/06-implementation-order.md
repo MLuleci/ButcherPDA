@@ -480,6 +480,10 @@ The design is in 2.14 (summary). Search and Details only need Phase 1 (the netwo
 - **Keyboard suggestions:** turn off suggestions and autocorrect outside the search fields. A `NoSuggestions` wrapper using `InterceptPlatformTextInput` is in `git stash` ("Turn off keyboard suggestions outside search fields"), but it's from before Phase 5's changes to those fields, so it needs reapplying by hand.
 - **Emulator scanning:** there's no way to trigger `FakeBarcodeScanner` on the emulator yet (Step 5.3).
 
+**Implementation notes:**
+- **From the device:** the Home buttons are larger. The pages' main buttons (Continue, Submit, Done, Save) are at least 56 dp tall, like the outlined buttons beside them. Checkbox labels toggle their checkbox (`CheckboxRow`, shared with the filter sheet).
+- **Ingredient table:** the swipes are gone. Each batch row has 48 dp Edit and Delete buttons, with the quantity and unit under the batch number. The column header is gone too, since the rows explain themselves, and `amount_label` with it. There's still no delete confirmation.
+
 ---
 
 ## How the phases depend on each other

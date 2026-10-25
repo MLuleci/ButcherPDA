@@ -4,14 +4,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -20,16 +16,10 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxDefaults
-import androidx.compose.material3.SwipeToDismissBoxState
-import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -42,7 +32,6 @@ import androidx.compose.ui.unit.dp
 import bg.butcher.pda.R
 import bg.butcher.pda.ui.screens.Coverage
 import bg.butcher.pda.util.formatDecimal
-import kotlinx.coroutines.launch
 
 data class TableParameters(
     val cellPadding: Dp,
@@ -55,35 +44,6 @@ data class BatchRow(
     val quantity: Double,
     val uom: String,
 )
-
-@Composable
-fun IngredientTableHeader(
-    params: TableParameters,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(IntrinsicSize.Min)
-            .background(MaterialTheme.colorScheme.surfaceDim)
-    ) {
-        Text(
-            text = stringResource(R.string.batch_label),
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier
-                .weight(1f)
-                .padding(params.cellPadding)
-        )
-        VerticalDivider(thickness = params.borderThickness, color = params.borderColor)
-        Text(
-            text = stringResource(R.string.amount_label),
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier
-                .weight(1f)
-                .padding(params.cellPadding)
-        )
-    }
-}
 
 @Composable
 private fun coverageColor(coverage: Coverage): Color {
@@ -167,6 +127,7 @@ fun IngredientTableSection(
     }
 }
 
+/** A batch with its quantity, and buttons to edit or remove it, large enough to press with gloves. */
 @Composable
 fun IngredientTableRow(
     batch: BatchRow,
@@ -175,70 +136,27 @@ fun IngredientTableRow(
     params: TableParameters,
     modifier: Modifier = Modifier
 ) {
-    // Not saveable: the list keeps saved state per key, so a re-added batch would come back dismissed
-    val positionalThreshold = SwipeToDismissBoxDefaults.positionalThreshold
-    val state = remember { SwipeToDismissBoxState(SwipeToDismissBoxValue.Settled, positionalThreshold) }
-    val scope = rememberCoroutineScope()
-    SwipeToDismissBox(
-        state = state,
-        modifier = modifier.fillMaxWidth(),
-        backgroundContent = {
-            when (state.dismissDirection) {
-                SwipeToDismissBoxValue.StartToEnd -> {
-                    // Edit - LHS
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = stringResource(R.string.edit_label),
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.primary)
-                            .wrapContentSize(Alignment.CenterStart)
-                            .padding(horizontal = 5.dp),
-                        tint = MaterialTheme.colorScheme.onPrimary
-                    )
-                }
-                SwipeToDismissBoxValue.EndToStart -> {
-                    // Delete - RHS
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = stringResource(R.string.delete_label),
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.error)
-                            .wrapContentSize(Alignment.CenterEnd)
-                            .padding(horizontal = 5.dp),
-                        tint = MaterialTheme.colorScheme.onError
-                    )
-                }
-                else -> {}
-            }
-        },
-        onDismiss = {
-            when (it) {
-                SwipeToDismissBoxValue.StartToEnd -> onEdit()
-                SwipeToDismissBoxValue.EndToStart -> onDelete()
-                else -> {}
-            }
-            scope.launch { state.reset() }
-        }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(start = params.cellPadding)
     ) {
-        Row(
-            modifier = Modifier
-                .height(IntrinsicSize.Min)
-                .background(MaterialTheme.colorScheme.surface)
-        ) {
-            Text(
-                text = batch.batchNumber,
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(params.cellPadding)
-            )
-            VerticalDivider(thickness = params.borderThickness, color = params.borderColor)
+        Column(modifier = Modifier.weight(1f).padding(vertical = params.cellPadding)) {
+            Text(text = batch.batchNumber)
             Text(
                 text = stringResource(R.string.quantity_with_unit, formatDecimal(batch.quantity), batch.uom),
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(params.cellPadding)
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        IconButton(onClick = onEdit, modifier = Modifier.size(48.dp)) {
+            Icon(imageVector = Icons.Default.Edit, contentDescription = stringResource(R.string.edit_label))
+        }
+        IconButton(onClick = onDelete, modifier = Modifier.size(48.dp)) {
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = stringResource(R.string.delete_label),
+                tint = MaterialTheme.colorScheme.error,
             )
         }
     }
@@ -258,7 +176,6 @@ fun IngredientTable(
         cellPadding = 5.dp,
     )
     Column(modifier = modifier.border(params.borderThickness, params.borderColor)) {
-        IngredientTableHeader(params)
         LazyColumn(modifier = Modifier.fillMaxWidth()) {
             ingredients.forEach { ingredient ->
                 val entries = batches[ingredient.itemCode].orEmpty()
