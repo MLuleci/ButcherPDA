@@ -179,7 +179,11 @@ fun MainApp(
                     }
                     val context = LocalContext.current
                     // Only once the BOM has loaded: there are no ingredients to check a batch against before
-                    OnScan(enabled = state.fetchState is NetworkState.Success && !submitting) { raw ->
+                    OnScan(
+                        enabled = state.fetchState is NetworkState.Success && !submitting,
+                        // A toast, so a failed scan neither opens an empty dialog nor clears a batch already found
+                        onNoRead = { Toast.makeText(context, R.string.scan_no_read, Toast.LENGTH_SHORT).show() },
+                    ) { raw ->
                         if (dialog is BatchDialogState.Editing) {
                             Toast.makeText(context, R.string.scan_ignored_while_editing, Toast.LENGTH_SHORT).show()
                         } else {

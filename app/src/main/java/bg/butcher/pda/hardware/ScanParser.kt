@@ -2,6 +2,9 @@ package bg.butcher.pda.hardware
 
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
+// e.g. "\000026" (UTF-8), which the scan engine sends before QR codes that declare their character set
+private val ECI_DESIGNATOR = Regex("""^\\\d{6}""")
+
 sealed interface ScannedCode {
     data class Batch(val number: String) : ScannedCode
     data class Unrecognised(val raw: String) : ScannedCode
@@ -13,7 +16,7 @@ sealed interface ScannedCode {
  * printed against another server still work; the lookup decides whether the batch exists.
  */
 fun parseScan(raw: String): ScannedCode {
-    val text = raw.trim()
+    val text = raw.trim().replace(ECI_DESIGNATOR, "")
     if (text.isEmpty()) return ScannedCode.Unrecognised(raw)
     if (!text.startsWith("http://", ignoreCase = true) && !text.startsWith("https://", ignoreCase = true)) {
         return ScannedCode.Batch(text)

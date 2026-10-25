@@ -6,14 +6,25 @@ import android.content.Intent
 import android.content.IntentFilter
 import androidx.core.content.ContextCompat
 import com.qs.wiget.PrintUtils
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
+
+sealed interface ScanEvent {
+    data class Code(val text: String) : ScanEvent
+
+    /** The trigger was pressed, but the scanner read nothing. */
+    data object NoRead : ScanEvent
+}
 
 interface BarcodeScanner {
-    val scans: Flow<String>
+    val events: Flow<ScanEvent>
 
     /**
      * Whether the hardware trigger fires the scanner at all; only scanning screens turn it on.
@@ -26,17 +37,37 @@ interface BarcodeScanner {
 private const val SCAN_ACTION = "com.qs.scancode"
 private const val SCAN_EXTRA = "data"
 
+// Sent by the firmware when the trigger is pressed
+private const val TRIGGER_ACTION = "ismart.intent.scandown"
+
+// The SDK powers the scan engine down 3 s after the trigger and drops its "nothing read" reply,
+// so a press with no code by then is a failed read
+private val NO_READ_TIMEOUT = 3500.milliseconds
+
 class BroadcastBarcodeScanner(private val context: Context) : BarcodeScanner {
     private var activeCount = 0
 
-    override val scans: Flow<String> = callbackFlow {
+    override val events: Flow<ScanEvent> = callbackFlow {
+        var noRead: Job? = null
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
-                intent.getStringExtra(SCAN_EXTRA)?.takeIf { it.isNotBlank() }?.let { trySend(it) }
+                noRead?.cancel()
+                when (intent.action) {
+                    TRIGGER_ACTION -> noRead = launch {
+                        delay(NO_READ_TIMEOUT)
+                        trySend(ScanEvent.NoRead)
+                    }
+                    SCAN_ACTION -> intent.getStringExtra(SCAN_EXTRA)?.takeIf { it.isNotBlank() }
+                        ?.let { trySend(ScanEvent.Code(it)) }
+                }
             }
         }
-        // Exported: the SDK's broadcast is implicit and global
-        ContextCompat.registerReceiver(context, receiver, IntentFilter(SCAN_ACTION), ContextCompat.RECEIVER_EXPORTED)
+        val filter = IntentFilter().apply {
+            addAction(SCAN_ACTION)
+            addAction(TRIGGER_ACTION)
+        }
+        // Exported: both broadcasts are implicit and come from outside the app
+        ContextCompat.registerReceiver(context, receiver, filter, ContextCompat.RECEIVER_EXPORTED)
         awaitClose { context.unregisterReceiver(receiver) }
     }
 
@@ -46,10 +77,10 @@ class BroadcastBarcodeScanner(private val context: Context) : BarcodeScanner {
     }
 }
 
-/** For the emulator and tests: [scan] stands in for the hardware trigger. */
+/** For the emulator and tests: [scan] and [noRead] stand in for the hardware trigger. */
 class FakeBarcodeScanner : BarcodeScanner {
-    private val _scans = MutableSharedFlow<String>(extraBufferCapacity = 1)
-    override val scans = _scans.asSharedFlow()
+    private val _events = MutableSharedFlow<ScanEvent>(extraBufferCapacity = 1)
+    override val events = _events.asSharedFlow()
 
     private var activeCount = 0
     val isActive: Boolean get() = activeCount > 0
@@ -59,6 +90,10 @@ class FakeBarcodeScanner : BarcodeScanner {
     }
 
     fun scan(code: String) {
-        if (isActive) _scans.tryEmit(code)
+        if (isActive) _events.tryEmit(ScanEvent.Code(code))
+    }
+
+    fun noRead() {
+        if (isActive) _events.tryEmit(ScanEvent.NoRead)
     }
 }

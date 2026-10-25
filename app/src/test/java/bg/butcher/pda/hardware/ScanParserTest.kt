@@ -21,6 +21,14 @@ class ScanParserTest {
     }
 
     @Test
+    fun eciDesignator_isRemoved() {
+        assertEquals(batch("BEEF.0001"), parseScan("\\000026https://example.com/app/batch/BEEF.0001"))
+        assertEquals(batch("BEEF.0001"), parseScan("\\000026BEEF.0001"))
+        // Only a backslash and exactly six digits at the start
+        assertEquals(batch("000026BEEF.0001"), parseScan("000026BEEF.0001"))
+    }
+
+    @Test
     fun otherUrls_areUnrecognised() {
         listOf(
             "https://erp.example.bg/app/item/BEEF",

@@ -12,16 +12,18 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class FakeBarcodeScannerTest {
     @Test
-    fun scans_onlyArriveWhileActive() = runTest(UnconfinedTestDispatcher()) {
+    fun events_onlyArriveWhileActive() = runTest(UnconfinedTestDispatcher()) {
         val scanner = FakeBarcodeScanner()
-        val received = mutableListOf<String>()
-        backgroundScope.launch { scanner.scans.collect { received += it } }
+        val received = mutableListOf<ScanEvent>()
+        backgroundScope.launch { scanner.events.collect { received += it } }
 
         scanner.scan("ignored")
+        scanner.noRead()
         scanner.setActive(true)
         scanner.scan("BEEF.0001")
+        scanner.noRead()
 
-        assertEquals(listOf("BEEF.0001"), received)
+        assertEquals(listOf(ScanEvent.Code("BEEF.0001"), ScanEvent.NoRead), received)
     }
 
     @Test
