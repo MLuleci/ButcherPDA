@@ -9,8 +9,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Checkbox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
@@ -50,6 +53,7 @@ fun StartScreen(
     modifier: Modifier = Modifier,
 ) {
     val selected = state.selectedItem
+    val quantityFocus = remember { FocusRequester() }
     Column(modifier = modifier) {
         Column(
             verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -63,6 +67,7 @@ fun StartScreen(
                 onItemSelected = onItemSelected,
                 selectedItem = selected,
                 searchState = state.searchState,
+                onPicked = { quantityFocus.requestFocus() },
             )
             QuantityInput(
                 value = state.quantityText,
@@ -70,7 +75,9 @@ fun StartScreen(
                 uom = selected?.uom.orEmpty(),
                 wholeNumber = selected?.isWholeNumber == true,
                 extraError = quantityTooSmallMessage(state),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(quantityFocus),
                 imeAction = ImeAction.Next,
             )
             ExpiryInput(

@@ -153,6 +153,8 @@ fun BomSelect(
     selectedItem: BomSearchResultItem?,
     searchState: NetworkState<List<BomSearchResultItem>, ErpError>,
     modifier: Modifier = Modifier,
+    // After the sheet has closed, so focus can move to the screen's own fields
+    onPicked: () -> Unit = {},
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
@@ -185,11 +187,12 @@ fun BomSelect(
         ) {
             BomSearch(
                 onQueryChanged = onQueryChanged,
-                onSelect = {
-                    if (it != null) onItemSelected(it)
+                onSelect = { item ->
+                    if (item != null) onItemSelected(item)
                     scope.launch { sheetState.hide() }.invokeOnCompletion {
                         if (!sheetState.isVisible) {
                             showBottomSheet = false
+                            if (item != null) onPicked()
                         }
                     }
                 },
