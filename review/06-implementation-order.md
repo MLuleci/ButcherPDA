@@ -8,7 +8,7 @@ The server work ([04-server-changes.md](04-server-changes.md)) is done. This is 
 
 Section references point to [00-summary.md](00-summary.md) unless another file is named. "§1 #3" means item 3 in the summary's section 1 table.
 
-**Progress:** Phases 0–4 are done. Steps marked *(done)* are committed and pushed. Where the implementation made a decision the plan left open, or differs from it, there's an **Implementation notes** list under the step.
+**Progress:** Phases 0–5 are done. Steps marked *(done)* are committed and pushed. Where the implementation made a decision the plan left open, or differs from it, there's an **Implementation notes** list under the step.
 
 ---
 
@@ -275,13 +275,16 @@ The core of the app. It's still driven by manual entry here; scanning plugs in d
 - **Split:** `upsertBatch` is now `addBatch` and `updateBatch`. Both reject invalid input, items not in the loaded BOM (`NOT_IN_RECIPE`) and fractions for whole-number ingredients. `addBatch` also rejects batches already on the form (`ALREADY_ADDED`, ignoring case). `updateBatch` only changes batches already on the form (`NOT_FOUND` otherwise).
 - **The dialog ignores these errors:** its lookup has already run the same checks, so they're only a backstop for future code paths.
 
-**Done when:** with the fake repository, you can add, edit and remove batches by typing. Duplicates, unknown batches, wrong items and fractional Nos quantities are all rejected under the right field, and Submit enables only when every ingredient is in range. *Not compiled, tested or checked on the emulator yet.*
+**Done when:** with the fake repository, you can add, edit and remove batches by typing. Duplicates, unknown batches, wrong items and fractional Nos quantities are all rejected under the right field, and Submit enables only when every ingredient is in range. *Built and tested; the device run in Phase 5 goes through the dialog.*
+
+**Fixed after review:**
+- **Instant delete:** a deleted row's swipe state was saved under its key, so adding the same batch again brought it back dismissed and deleted it at once. The swipe state is now plain `remember`.
 
 ---
 
-## Phase 5: Submit, Summary and the scanner (2 days)
+## Phase 5: Submit, Summary and the scanner (2 days) *(done)*
 
-### Step 5.1: Submit and Summary
+### Step 5.1: Submit and Summary *(done)*
 - **Submit:** send with `requestId`. A 500 or network failure shows "Couldn't confirm the submission. Retry to check.", and Retry re-sends the same `requestId` (2.12 point 4).
 - **Summary screen:** shows the entry. Navigating to it replaces Form, so Back can't reach the submitted form (2.8). Add its `composable` to the `manufacture` graph, which holds only Start and Form so far (Step 2.1).
 - **Effects on Form:** only the Start route collects `FormViewModel.effects` today, so submit's success and failure effects need a collector on Form too (02, finding 11).
@@ -289,7 +292,17 @@ The core of the app. It's still driven by manual entry here; scanning plugs in d
 - **Done / Back** leaves the graph.
 - **Print button:** add it now with `FakeLabelPrinter`. It logs what it would print (2.11 part 4).
 
-### Step 5.2: Vendor SDK setup
+**Implementation notes:**
+- **Saved state:** the submitted entry is saved with the inputs, so Summary survives process death. `canSubmit` is false once the run has been submitted.
+- **Retry:** after an unknown outcome the Submit button reads Retry. Other failures show the server's message.
+- **Back during a submit:** blocked on Form, and the top-bar arrow is greyed out. A late result could otherwise land on a changed run, or be lost when the graph is left. The arrow now goes through the back dispatcher, so it follows the routes' `BackHandler`s.
+- **Summary:** keeps the entry it opened with, so "Same BOM again" can clear it while the page animates out. Back and Done pop the whole `manufacture` graph.
+- **Effects:** one shared `CollectFormEffects` on Start, Form and Summary. `GotoNextPage` is now `GotoForm`, alongside the new `GotoSummary`.
+- **Printing:** `hardware/LabelPrinter.kt` has `LabelData` (nullable dates, for Details), `ManufactureEntry.toLabel()`, the `LabelPrinter` interface and `FakeLabelPrinter`. A failed print shows "Printer not ready" as a toast.
+- **Dates:** `dateFromToday` and `formatDate` moved to `util/Dates.kt`.
+- **Tests:** `unitTests.isReturnDefaultValues = true`, since `Log` calls threw in local tests, and effects are collected on `UnconfinedTestDispatcher(testScheduler)` so they arrive before the assertions.
+
+### Step 5.2: Vendor SDK setup *(done)*
 - **Build:**
   - Add `implementation(files("libs/qspdasdk.jar"))`.
   - `git mv jniLibs/armeabi jniLibs/armeabi-v7a` (2.11 part 1).
@@ -297,7 +310,16 @@ The core of the app. It's still driven by manual entry here; scanning plugs in d
 - **`QsPdaHardware.init(app)`** in `MainApplication.onCreate`, with `applicationContext`, the 2500 ms delay and `setStarNum(30)`. Catch `LinkageError` (2.11 part 2).
 - **Check the APK:** `unzip -l app-debug.apk | grep '\.so'` should show the library in every ABI folder.
 
-### Step 5.3: Scanner
+**Implementation notes:**
+- **APK:** confirmed, with `libzyapi_common.so` in both `armeabi-v7a` and `arm64-v8a`.
+- **Scans off at start-up:** `PrintUtils.isCanScan = false` before `initPrintUtils`. The SDK only writes it in its static initializer, so it stays off until a scanning screen turns it on.
+- **Logging:** `Build.MODEL` and the serial port descriptor (`mComFd`) are logged at start-up. The SDK fails silently if the port doesn't open. On the test device the descriptor is 23.
+- **Not used yet:** `QsPdaHardware.available` chooses the scanner (Step 5.3). The printer is still always `FakeLabelPrinter` (Step 6.5).
+- **Device findings:**
+  - The vendor demo says to uninstall the factory test apps first, since they compete for the serial port. Done on the test device.
+  - Launching in Debug from Android Studio can leave the scan engine off until the next start. The module still answers `##55UP`, but its light stays off. It's probably the debugger slowing the SDK's timed start-up. Use "Attach Debugger to Android Process" on an app started normally instead.
+
+### Step 5.3: Scanner *(done)*
 - **Interfaces:**
   - `BarcodeScanner` with `scans: Flow<String>` and `setActive(Boolean)`.
   - `BroadcastBarcodeScanner`, listening for `com.qs.scancode` / `"data"`.
@@ -311,11 +333,32 @@ The core of the app. It's still driven by manual entry here; scanning plugs in d
   - Clear focus and hide the keyboard after a scan (2.1).
 - **`ScanFeedback`:** beep when a lookup is accepted, using `res/raw/scan_beep.ogg` (2.11 part 3).
 
+**Implementation notes:**
+- **Device test:** results arrive on `com.qs.scancode` / `"data"`, and the firmware broadcasts `ismart.intent.scandown` on each trigger press. The vendor demo (`MainActivity.java`) confirms both.
+- **Events:** `BarcodeScanner.events` emits `ScanEvent.Code(text)` or `ScanEvent.NoRead`. When the engine reads nothing it replies `ESC ##55UP`, which the SDK drops, so `NoRead` is a timeout: a trigger press with no code within 3.5 s (the SDK powers the engine down at 3 s). Form shows it as a "Couldn't read the code" toast.
+- **`setActive`:** counted rather than on/off, since two routes can both be started during a transition. `OnScan` uses `repeatOnLifecycle(STARTED)`, so scanning also pauses in the background.
+- **`parseScan`:** also strips a leading ECI designator (a backslash and six digits, e.g. `\000026` for UTF-8). The scan engine adds it to QR codes that declare a character set.
+- **Scan handling:**
+  - Each scan has its own `scanId`, so scanning the same label again looks it up again.
+  - A code that isn't a batch label shows "This code is not a batch label" under the field, without a lookup (`BatchLookupError.NotABatchLabel`).
+  - Scans are off on Form while a submit is in flight.
+- **Sounds:** `ScanFeedback` plays `res/raw/beep1.ogg` when a scanned batch is accepted and `beep3.ogg` with the no-read toast, through `SoundPool`.
+- **Not done:** there's no way to trigger `FakeBarcodeScanner` on the emulator.
+- **Printing for Step 6.5:** `com.qs.getmassage` sends `message` `0` when printed and `1` when out of paper, which gives a real print result.
+- **Keypad, alongside this step:**
+  - Enter moves from the batch number to the quantity, and in a valid quantity it adds or saves the batch.
+  - On Start, Enter moves from quantity to expiry, but doesn't press Continue, since the checkboxes come after it.
+  - Enter in the BOM search puts the keyboard away, and picking a BOM moves focus to the quantity.
+  - The batch dialog waits for its window to have focus before opening the keyboard. Its focus and keyboard calls use the dialog's own window.
+  - The keypad's Fn key (letters or digits) isn't visible to apps, so there's no mode indicator.
+
 **Done when:** on the device, a full run works end to end:
 1. Scan ingredient labels.
 2. Submit.
 3. See the Summary.
 4. "Same BOM again" returns to Start with everything kept.
+
+*Confirmed on the device.*
 
 ---
 
