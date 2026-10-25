@@ -30,9 +30,9 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import bg.butcher.pda.R
-import bg.butcher.pda.data.LABEL_HEIGHT_RANGE_MM
 import bg.butcher.pda.data.PaperSize
 import bg.butcher.pda.data.PaperType
+import bg.butcher.pda.data.labelHeightRange
 
 @Composable
 fun ValidatedTextField(
@@ -169,9 +169,10 @@ fun SettingsScreen(
             onSelect = viewModel::setPaperType,
             enabled = uiState.isLoaded,
         )
+        val heightRange = labelHeightRange(uiState.paperType)
         ValidatedTextField(
             label = stringResource(R.string.label_height_label),
-            error = stringResource(R.string.invalid_label_height, LABEL_HEIGHT_RANGE_MM.first, LABEL_HEIGHT_RANGE_MM.last),
+            error = stringResource(R.string.invalid_label_height, heightRange.first, heightRange.last),
             state = uiState.labelHeight,
             onChanged = { viewModel.setLabelHeight(it) },
             enabled = uiState.isLoaded,

@@ -37,7 +37,7 @@ data class SettingsUiState(
     val baseUrl: SettingState = SettingState(),
     val apiKey: SettingState = SettingState(),
     val paperSize: PaperSize = PaperSize.MM_80,
-    val labelHeight: SettingState = labelHeightState(DEFAULT_LABEL_HEIGHT_MM.toString()),
+    val labelHeight: SettingState = labelHeightState(DEFAULT_LABEL_HEIGHT_MM.toString(), PaperType.LABELS),
     val paperType: PaperType = PaperType.LABELS,
 ) {
     val canSave: Boolean
@@ -48,7 +48,8 @@ private fun baseUrlState(url: String) = SettingState(url, normaliseBaseUrl(url) 
 
 private fun apiKeyState(key: String) = SettingState(key, normaliseApiKey(key) != null)
 
-private fun labelHeightState(mm: String) = SettingState(mm, normaliseLabelHeight(mm) != null)
+private fun labelHeightState(mm: String, paperType: PaperType) =
+    SettingState(mm, normaliseLabelHeight(mm, paperType) != null)
 
 class SettingsViewModel(private val settingsRepository: SettingsRepository): ViewModel() {
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -67,7 +68,7 @@ class SettingsViewModel(private val settingsRepository: SettingsRepository): Vie
                         baseUrl = baseUrlState(settings.baseUrl),
                         apiKey = apiKeyState(settings.apiKey),
                         paperSize = settings.paperSize,
-                        labelHeight = labelHeightState(settings.labelHeightMm.toString()),
+                        labelHeight = labelHeightState(settings.labelHeightMm.toString(), settings.paperType),
                         paperType = settings.paperType,
                     )
                 }
@@ -88,11 +89,14 @@ class SettingsViewModel(private val settingsRepository: SettingsRepository): Vie
     }
 
     fun setPaperType(type: PaperType) {
-        _uiState.update { it.copy(isDirty = true, paperType = type) }
+        // A roll needs a taller label, so the height is checked again
+        _uiState.update {
+            it.copy(isDirty = true, paperType = type, labelHeight = labelHeightState(it.labelHeight.value, type))
+        }
     }
 
     fun setLabelHeight(mm: String) {
-        _uiState.update { it.copy(isDirty = true, labelHeight = labelHeightState(mm)) }
+        _uiState.update { it.copy(isDirty = true, labelHeight = labelHeightState(mm, it.paperType)) }
     }
 
     fun save() {
@@ -100,7 +104,7 @@ class SettingsViewModel(private val settingsRepository: SettingsRepository): Vie
         if (!state.canSave) return
         val baseUrl = normaliseBaseUrl(state.baseUrl.value) ?: return
         val apiKey = normaliseApiKey(state.apiKey.value) ?: return
-        val labelHeight = normaliseLabelHeight(state.labelHeight.value) ?: return
+        val labelHeight = normaliseLabelHeight(state.labelHeight.value, state.paperType) ?: return
         _uiState.update { it.copy(isDirty = false) }
         viewModelScope.launch {
             try {

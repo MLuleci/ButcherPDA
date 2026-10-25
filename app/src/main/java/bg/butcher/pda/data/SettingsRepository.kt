@@ -34,8 +34,14 @@ enum class PaperType { LABELS, CONTINUOUS }
 
 const val DEFAULT_LABEL_HEIGHT_MM = 40
 
-// Below 30 mm the text no longer fits beside the QR code; the upper limit is only a guard against typos
-val LABEL_HEIGHT_RANGE_MM = 30..150
+/**
+ * Below 30 mm the text no longer fits beside the QR code. A roll needs 5 mm more, for the blank end it's torn off
+ * in, which leaves the same room. The upper limit is only a guard against typos.
+ */
+fun labelHeightRange(paperType: PaperType): IntRange = when (paperType) {
+    PaperType.LABELS -> 30..150
+    PaperType.CONTINUOUS -> 35..150
+}
 
 data class PdaSettings(
     val baseUrl: String = "",
@@ -45,8 +51,9 @@ data class PdaSettings(
     val paperType: PaperType = PaperType.LABELS,
 )
 
-/** A whole number of millimetres within [LABEL_HEIGHT_RANGE_MM]. */
-fun normaliseLabelHeight(input: String): Int? = input.trim().toIntOrNull()?.takeIf { it in LABEL_HEIGHT_RANGE_MM }
+/** A whole number of millimetres within [labelHeightRange]. */
+fun normaliseLabelHeight(input: String, paperType: PaperType): Int? =
+    input.trim().toIntOrNull()?.takeIf { it in labelHeightRange(paperType) }
 
 /** HTTPS only. A bare host name gets `https://` added. */
 fun normaliseBaseUrl(input: String): HttpUrl? {
@@ -73,12 +80,14 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     val settings: Flow<PdaSettings> = dataStore.data
         .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
         .map { p ->
+            val paperType = PaperType.entries.firstOrNull { it.name == p[Keys.PAPER_TYPE] } ?: PaperType.LABELS
             PdaSettings(
                 baseUrl = p[Keys.BASE_URL].orEmpty(),
                 apiKey = p[Keys.API_KEY].orEmpty(),
                 paperSize = PaperSize.entries.firstOrNull { it.name == p[Keys.PAPER_SIZE] } ?: PaperSize.MM_80,
-                labelHeightMm = p[Keys.LABEL_HEIGHT]?.takeIf { it in LABEL_HEIGHT_RANGE_MM } ?: DEFAULT_LABEL_HEIGHT_MM,
-                paperType = PaperType.entries.firstOrNull { it.name == p[Keys.PAPER_TYPE] } ?: PaperType.LABELS,
+                labelHeightMm = p[Keys.LABEL_HEIGHT]?.takeIf { it in labelHeightRange(paperType) }
+                    ?: DEFAULT_LABEL_HEIGHT_MM,
+                paperType = paperType,
             )
         }
 

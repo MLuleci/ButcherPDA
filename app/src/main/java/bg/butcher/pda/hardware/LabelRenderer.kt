@@ -8,6 +8,7 @@ import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
 import android.text.TextUtils
+import bg.butcher.pda.data.PaperType
 import bg.butcher.pda.util.shortDate
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
@@ -24,8 +25,9 @@ private const val GAP = 10
 // About 6 mm: printing closer to the gap makes the printer feed an extra blank label
 private const val BOTTOM_MARGIN = 6 * DOTS_PER_MM
 
-// On a plain roll: blank paper after the label, to take it past the tear bar. The printer can't feed by itself
-// there, since it has no gap to feed to
+// On a plain roll: blank paper at the end of each label, inside its height. The tear bar is past the print head, so
+// the end of each print stays in the printer and starts the next piece; this keeps the tear in the blank part.
+// Whole bands
 const val TEAR_OFF_ROWS = 12 * DOTS_PER_MM
 
 // The SDK sends the picture in bands of 24 rows, and its buffer is too short for a partial last band on
@@ -88,18 +90,31 @@ private fun textBlock(label: LabelData, wholeLines: List<String>, width: Int, si
 private fun widest(lines: List<String>, size: Float): Int =
     lines.maxOfOrNull { ceil(paint(size).measureText(it)).toInt() } ?: 0
 
-/** Whole bands only, rounding down so the bottom margin only grows. */
-fun labelBitmapHeight(labelHeightMm: Int): Int = (labelHeightMm * DOTS_PER_MM - BOTTOM_MARGIN) / BAND_ROWS * BAND_ROWS
-
-/** [rows] rounded up to whole bands. */
-fun feedHeight(rows: Int): Int = (rows + BAND_ROWS - 1) / BAND_ROWS * BAND_ROWS
+/** The rows the QR code and text are drawn in, from the top, and the whole bitmap's height. */
+data class LabelRows(val label: Int, val bitmap: Int)
 
 /**
- * The QR code's side: what's left beside the dates at their smallest, up to the label's height and [maxSize].
+ * In whole bands. A die-cut label stops [BOTTOM_MARGIN] short of the gap, rounding down so the margin only grows,
+ * and the printer feeds the rest. On a roll the bitmap is the whole label height, to the nearest band, since
+ * nothing else feeds the paper; the last [TEAR_OFF_ROWS] stay blank.
+ */
+fun labelRows(labelHeightMm: Int, paperType: PaperType): LabelRows = when (paperType) {
+    PaperType.LABELS -> {
+        val rows = (labelHeightMm * DOTS_PER_MM - BOTTOM_MARGIN) / BAND_ROWS * BAND_ROWS
+        LabelRows(rows, rows)
+    }
+    PaperType.CONTINUOUS -> {
+        val rows = (labelHeightMm * DOTS_PER_MM + BAND_ROWS / 2) / BAND_ROWS * BAND_ROWS
+        LabelRows(rows - TEAR_OFF_ROWS, rows)
+    }
+}
+
+/**
+ * The QR code's side: what's left beside the dates at their smallest, up to the label's [rows] and [maxSize].
  * [datesWidth] is the widest of the lines that must print whole.
  */
-fun qrSize(width: Int, labelHeightMm: Int, datesWidth: Int, maxSize: Int = Int.MAX_VALUE): Int {
-    val contentHeight = labelBitmapHeight(labelHeightMm) - 2 * PADDING
+fun qrSize(width: Int, rows: LabelRows, datesWidth: Int, maxSize: Int = Int.MAX_VALUE): Int {
+    val contentHeight = rows.label - 2 * PADDING
     return minOf(contentHeight, width - 2 * PADDING - GAP - datesWidth, maxSize).coerceAtLeast(0)
 }
 
@@ -107,19 +122,17 @@ fun qrSize(width: Int, labelHeightMm: Int, datesWidth: Int, maxSize: Int = Int.M
  * The whole label as one bitmap, so it prints as one job with one feed, and Cyrillic needs no printer font.
  * The QR code is as large as the label allows on the left. The quantity and both dates always print whole beside
  * it, at the largest size that fits; the product name, batch number and Stock Entry ID may be cut short.
- * [feedRows] of blank paper follow the label.
+ * Below the label's [rows], the bitmap is blank.
  */
 fun renderLabel(
     label: LabelData,
     captions: LabelCaptions,
     qrContent: String?,
     width: Int,
-    labelHeightMm: Int,
+    rows: LabelRows,
     maxQrSize: Int = Int.MAX_VALUE,
-    feedRows: Int = 0,
 ): Bitmap {
-    val height = labelBitmapHeight(labelHeightMm)
-    val contentHeight = height - 2 * PADDING
+    val contentHeight = rows.label - 2 * PADDING
     val wholeLines = listOfNotNull(
         label.quantity,
         label.productionDate?.let { "${captions.produced}: ${shortDate(it)}" },
@@ -129,7 +142,7 @@ fun renderLabel(
     // Room for the dates at their smallest comes first; LabelRendererTest checks the QR code still clears
     // MIN_QR_SIZE on both paper sizes
     val qrSize = if (qrContent == null) 0 else {
-        qrSize(width, labelHeightMm, widest(wholeLines, MIN_TEXT_SIZE), maxQrSize)
+        qrSize(width, rows, widest(wholeLines, MIN_TEXT_SIZE), maxQrSize)
     }
     val textLeft = PADDING + if (qrSize > 0) qrSize + GAP else 0
     val textWidth = width - textLeft - PADDING
@@ -141,7 +154,7 @@ fun renderLabel(
         text = textBlock(label, wholeLines, textWidth, size)
     }
 
-    val bitmap = Bitmap.createBitmap(width, height + feedHeight(feedRows), Bitmap.Config.ARGB_8888)
+    val bitmap = Bitmap.createBitmap(width, rows.bitmap, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
     canvas.drawColor(Color.WHITE)
     qrContent?.takeIf { qrSize > 0 }?.let {

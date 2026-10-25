@@ -64,6 +64,16 @@ class SettingsRepositoryTest {
     }
 
     @Test
+    fun labelHeight_tooShortForARollFallsBackToTheDefault() = runTest {
+        dataStore.edit {
+            it[stringPreferencesKey("paper_type")] = PaperType.CONTINUOUS.name
+            it[intPreferencesKey("label_height_mm")] = 30
+        }
+
+        assertEquals(DEFAULT_LABEL_HEIGHT_MM, repository.settings.first().labelHeightMm)
+    }
+
+    @Test
     fun labelHeight_defaultsTo40mmAndIgnoresOutOfRangeValues() = runTest {
         assertEquals(DEFAULT_LABEL_HEIGHT_MM, repository.settings.first().labelHeightMm)
 

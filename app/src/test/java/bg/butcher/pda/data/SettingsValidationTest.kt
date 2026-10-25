@@ -49,12 +49,19 @@ class SettingsValidationTest {
 
     @Test
     fun normaliseLabelHeight_acceptsWholeMillimetresInRange() {
-        assertEquals(40, normaliseLabelHeight(" 40 "))
-        assertEquals(30, normaliseLabelHeight("30"))
-        assertEquals(150, normaliseLabelHeight("150"))
-        assertNull(normaliseLabelHeight("29"))
-        assertNull(normaliseLabelHeight("151"))
-        assertNull(normaliseLabelHeight("40.5"))
-        assertNull(normaliseLabelHeight(""))
+        val labels = PaperType.LABELS
+        assertEquals(40, normaliseLabelHeight(" 40 ", labels))
+        assertEquals(30, normaliseLabelHeight("30", labels))
+        assertEquals(150, normaliseLabelHeight("150", labels))
+        assertNull(normaliseLabelHeight("29", labels))
+        assertNull(normaliseLabelHeight("151", labels))
+        assertNull(normaliseLabelHeight("40.5", labels))
+        assertNull(normaliseLabelHeight("", labels))
+    }
+
+    @Test
+    fun normaliseLabelHeight_needsMoreOnARoll() {
+        assertNull(normaliseLabelHeight("34", PaperType.CONTINUOUS))
+        assertEquals(35, normaliseLabelHeight("35", PaperType.CONTINUOUS))
     }
 }
