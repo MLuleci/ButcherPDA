@@ -491,6 +491,10 @@ The design is in 2.14 (summary). Search and Details only need Phase 1 (the netwo
   - **Settings:** laid out like Start (20 dp padding, 10 dp spacing, Save at the bottom outside the scroll), with `modifier` parameters on its fields and a toast after saving, or if saving fails.
   - **Small fixes:** `MainApplication.container` has a private setter; `HomeScreen` and `ErrorMessage` take `modifier` as their first optional parameter; an unused import and the unused `valid_label` string are gone. Gradle stays at 2 GB: 4 GB strained the machine alongside Android Studio.
   - **Left as is:** the theme files (Compose and XML), and with them the `material` and `appcompat` libraries the XML theme needs. `printState` keeps `Throwable`, since a printer failure isn't an `ErpError`. The `"name (unit)"` and `" · "` joins have no words to translate.
+- **Release build:**
+  - **R8:** `optimization { enable = true }` on `release`, which minifies and shrinks resources. The vendor SDK's keep rules are in `src/main/keepRules/rules.keep`. kotlinx.serialization (models, saved state, routes), Navigation and Retrofit ship their own rules, so none are added for them.
+  - **Versions:** `versionCode` is the commit count (`git rev-list --count HEAD`), so each commit on master is newer than the last. `versionName` is the short commit hash. Without git they fall back to `1` / `"dev"`. Build releases from a full clone, since a shallow one undercounts.
+  - **Signing:** `keystore.properties` (git-ignored, with `storeFile`, `storePassword`, `keyAlias` and `keyPassword`) in the project root names the key. Without it, release builds are unsigned. v1 signing stays on, because Android 6 only checks v1. `.gitignore` also covers `*.jks` and `*.keystore`.
 
 ---
 

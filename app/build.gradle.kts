@@ -1,7 +1,24 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.kotlin.serialization)
+}
+
+/** Git's output, or null without git or a repository. */
+fun git(vararg args: String): String? = runCatching {
+    val result = providers.exec {
+        commandLine("git", *args)
+        isIgnoreExitValue = true
+    }
+    result.standardOutput.asText.get().trim().takeIf { result.result.get().exitValue == 0 && it.isNotEmpty() }
+}.getOrNull()
+
+// The release key stays out of the repo: keystore.properties (git-ignored) in the project root names it.
+// Without the file, release builds are unsigned.
+val keystoreProperties = rootProject.file("keystore.properties").takeIf { it.exists() }?.let { file ->
+    Properties().apply { file.inputStream().use(::load) }
 }
 
 android {
@@ -14,10 +31,27 @@ android {
         applicationId = "bg.butcher.pda"
         minSdk = 23 // Target PDAs are stuck on Android 6.0
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        // The commit count, so each commit on master is newer than the last, which self-update relies on.
+        // A shallow clone undercounts, so build releases from a full clone.
+        versionCode = git("rev-list", "--count", "HEAD")?.toIntOrNull() ?: 1
+        // The commit, as shown in Settings and used as the release tag
+        versionName = git("rev-parse", "--short", "HEAD") ?: "dev"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        if (keystoreProperties != null) {
+            create("release") {
+                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+                // Android 6 only checks the v1 (JAR) signature; v2 is for 7.0 and later
+                enableV1Signing = true
+                enableV2Signing = true
+            }
+        }
     }
 
     buildTypes {
@@ -27,8 +61,10 @@ android {
         }
         release {
             buildConfigField("boolean", "USE_FAKE_ERP", "false")
+            signingConfig = signingConfigs.findByName("release")
+            // R8 shrinking and resource shrinking; keep rules are in src/main/keepRules
             optimization {
-                enable = false
+                enable = true
             }
         }
     }
