@@ -111,6 +111,15 @@ fun BatchDialog(
         match != null
     }
 
+    fun submit(): Boolean {
+        if (!canSubmit || quantity == null) return false
+        when {
+            editing != null -> onSubmit(editing.itemCode, editing.batchNumber, quantity)
+            match != null -> onSubmit(match.ingredient.itemCode, match.batch.name, quantity)
+        }
+        return true
+    }
+
     val batchFocus = remember { FocusRequester() }
 
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(dismissOnClickOutside = false)) {
@@ -171,17 +180,12 @@ fun BatchDialog(
                     uom = ingredient?.uom ?: editing?.uom.orEmpty(),
                     wholeNumber = wholeNumber,
                     modifier = Modifier.fillMaxWidth(),
+                    onDone = ::submit,
                 )
                 ConfirmCancelButtons(
                     confirmLabel = stringResource(if (editing != null) R.string.save_label else R.string.add_label),
                     cancelLabel = stringResource(R.string.cancel_label),
-                    onConfirm = {
-                        when {
-                            quantity == null -> {}
-                            editing != null -> onSubmit(editing.itemCode, editing.batchNumber, quantity)
-                            match != null -> onSubmit(match.ingredient.itemCode, match.batch.name, quantity)
-                        }
-                    },
+                    onConfirm = { submit() },
                     onCancel = onDismiss,
                     confirmEnabled = canSubmit,
                 )

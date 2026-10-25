@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import bg.butcher.pda.R
@@ -30,6 +31,7 @@ fun SearchField(
     requestFocus: Boolean = false,
 ) {
     val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
     TextField(
         state = state,
         lineLimits = TextFieldLineLimits.SingleLine,
@@ -43,6 +45,8 @@ fun SearchField(
             }
         },
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        // Results update as you type, so Enter only puts the keyboard away
+        onKeyboardAction = { focusManager.clearFocus() },
         modifier = modifier
             .fillMaxWidth()
             .focusable()

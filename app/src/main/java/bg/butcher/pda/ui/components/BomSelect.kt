@@ -34,6 +34,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
@@ -92,6 +93,7 @@ fun BomSearch(
     val state = rememberTextFieldState()
     val query = state.text.toString()
     var selectedItem: BomSearchResultItem? by remember { mutableStateOf(null) }
+    val focusManager = LocalFocusManager.current
     val minHeight = if (searchState is NetworkState.Idle) 0.dp else 100.dp
 
     LaunchedEffect(query) {
@@ -119,7 +121,10 @@ fun BomSearch(
                                         item = item,
                                         selected = item.name == selectedItem?.name,
                                         striped = index % 2 == 1,
-                                        onClick = { selectedItem = item },
+                                        onClick = {
+                                            selectedItem = item
+                                            focusManager.clearFocus()
+                                        },
                                     )
                                 }
                             }

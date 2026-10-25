@@ -23,6 +23,8 @@ object QsPdaHardware {
             // Scans are off until a scanning screen turns them on
             PrintUtils.isCanScan = false
             PrintUtils.initPrintUtils(app.applicationContext)
+            // The SDK fails silently when the port is busy, e.g. still held by the previous process
+            Log.i(TAG, "Serial port fd = ${PrintUtils.mComFd}")
             Handler(Looper.getMainLooper()).postDelayed({
                 PrintUtils.labelEnable(true)
                 PrintUtils.setStarNum(30)

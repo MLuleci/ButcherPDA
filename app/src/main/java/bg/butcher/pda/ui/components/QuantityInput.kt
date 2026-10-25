@@ -1,5 +1,6 @@
 package bg.butcher.pda.ui.components
 
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -22,6 +23,10 @@ fun QuantityInput(
     modifier: Modifier = Modifier,
     // Shown when the value itself is valid, e.g. a rule that needs the server's data
     extraError: String? = null,
+    // Next moves focus on to the following field
+    imeAction: ImeAction = ImeAction.Done,
+    // Enter/Done; returns false to fall back to putting the keyboard away
+    onDone: () -> Boolean = { false },
 ) {
     val error = validateQuantity(value, wholeNumber)?.let { stringResource(it) } ?: extraError
     OutlinedTextField(
@@ -33,8 +38,9 @@ fun QuantityInput(
             autoCorrectEnabled = false,
             // Hides the decimal key on most keyboards; the validator is the real check
             keyboardType = if (wholeNumber) KeyboardType.Number else KeyboardType.Decimal,
-            imeAction = ImeAction.Done,
+            imeAction = imeAction,
         ),
+        keyboardActions = KeyboardActions(onDone = { if (!onDone()) defaultKeyboardAction(ImeAction.Done) }),
         suffix = {
             if (uom.isNotEmpty()) {
                 Text(uom)
