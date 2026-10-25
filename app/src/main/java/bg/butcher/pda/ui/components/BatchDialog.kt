@@ -21,11 +21,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -42,6 +44,7 @@ import bg.butcher.pda.util.formatDecimal
 import bg.butcher.pda.util.parseDecimal
 import bg.butcher.pda.util.validateQuantity
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
@@ -72,15 +75,8 @@ fun BatchDialog(
     // Reset with the batch number, so an earlier match can't be added for a new one
     var lookup by remember(input) { mutableStateOf<NetworkState<BatchMatch, BatchLookupError>>(NetworkState.Idle) }
 
-    val focusManager = LocalFocusManager.current
-    val keyboard = LocalSoftwareKeyboardController.current
-
     LaunchedEffect(input) {
         if (input == null) return@LaunchedEffect
-        if (input.fromScan) {
-            focusManager.clearFocus(force = true)
-            keyboard?.hide()
-        }
         if (input.unrecognised) {
             lookup = NetworkState.Error(BatchLookupError.NotABatchLabel)
             return@LaunchedEffect
@@ -167,9 +163,22 @@ fun BatchDialog(
                         .fillMaxWidth()
                         .focusRequester(batchFocus)
                 )
-                // Inside the dialog's window, once the field is attached
+                // Read inside the dialog, so they act on its window rather than the screen behind it
+                val windowInfo = LocalWindowInfo.current
+                val focusManager = LocalFocusManager.current
+                val keyboard = LocalSoftwareKeyboardController.current
                 LaunchedEffect(Unit) {
-                    if (input != null && !input.fromScan) batchFocus.requestFocus()
+                    if (input == null || input.fromScan) return@LaunchedEffect
+                    // Opened from +; the keyboard only opens once the dialog's window has focus
+                    snapshotFlow { windowInfo.isWindowFocused }.first { it }
+                    batchFocus.requestFocus()
+                    keyboard?.show()
+                }
+                LaunchedEffect(input) {
+                    if (input?.fromScan == true) {
+                        focusManager.clearFocus(force = true)
+                        keyboard?.hide()
+                    }
                 }
                 QuantityInput(
                     value = quantityText,
