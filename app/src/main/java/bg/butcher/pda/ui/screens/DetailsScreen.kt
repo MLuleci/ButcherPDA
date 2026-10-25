@@ -34,6 +34,7 @@ import bg.butcher.pda.ui.components.ErrorMessage
 import bg.butcher.pda.ui.components.LabelledValue
 import bg.butcher.pda.ui.theme.PreviewTheme
 import bg.butcher.pda.ui.theme.ThemePreviews
+import bg.butcher.pda.ui.theme.statusColors
 import bg.butcher.pda.util.formatDecimal
 import bg.butcher.pda.util.shortDate
 import bg.butcher.pda.util.today
@@ -56,7 +57,8 @@ private fun ExpiryBanner(expiry: LocalDate?, today: LocalDate) {
             } else {
                 pluralStringResource(R.plurals.expires_in_days_banner, days, days)
             }
-            Triple(text, colors.tertiaryContainer, colors.onTertiaryContainer)
+            val warning = statusColors.warning
+            Triple(text, warning.colorContainer, warning.onColorContainer)
         }
         ExpiryStatus.UNKNOWN ->
             Triple(stringResource(R.string.no_expiry_date), colors.surfaceVariant, colors.onSurfaceVariant)

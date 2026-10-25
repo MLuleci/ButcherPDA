@@ -2,7 +2,6 @@ package bg.butcher.pda.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,6 +33,7 @@ import bg.butcher.pda.R
 import bg.butcher.pda.ui.screens.Coverage
 import bg.butcher.pda.ui.theme.PreviewTheme
 import bg.butcher.pda.ui.theme.ThemePreviews
+import bg.butcher.pda.ui.theme.statusColors
 import bg.butcher.pda.util.formatDecimal
 
 data class TableParameters(
@@ -49,14 +49,11 @@ data class BatchRow(
 )
 
 @Composable
-private fun coverageColor(coverage: Coverage): Color {
-    val dark = isSystemInDarkTheme()
-    return when (coverage) {
-        Coverage.MISSING -> MaterialTheme.colorScheme.onSurfaceVariant
-        Coverage.UNDER -> if (dark) Color(0xFFFFB951) else Color(0xFF8A5100)
-        Coverage.OK -> if (dark) Color(0xFF7DDB8A) else Color(0xFF1B6D2F)
-        Coverage.OVER -> MaterialTheme.colorScheme.error
-    }
+private fun coverageColor(coverage: Coverage): Color = when (coverage) {
+    Coverage.MISSING -> MaterialTheme.colorScheme.onSurfaceVariant
+    Coverage.UNDER -> statusColors.warning.color
+    Coverage.OK -> statusColors.success.color
+    Coverage.OVER -> MaterialTheme.colorScheme.error
 }
 
 @Composable
