@@ -139,4 +139,33 @@ class UpdateRepositoryTest {
         assertUpdateFails { repository.download(update) }
         assertTrue(folder.root.resolve("updates").listFiles().orEmpty().isEmpty())
     }
+
+    @Test
+    fun download_reusesAFinishedDownloadWithoutARequest() = runTest {
+        val cached = folder.root.resolve("updates/ButcherPDA-60.apk").apply { writeBytes(ByteArray(1000)) }
+        val update = AvailableUpdate(60, "db0f460", server.url("/asset").toString(), 1000)
+        var lastProgress = 0f
+
+        val apk = repository.download(update) { lastProgress = it }
+
+        assertEquals(cached, apk)
+        assertEquals(1f, lastProgress)
+        assertEquals(0, server.requestCount)
+    }
+
+    @Test
+    fun download_replacesAnUnfinishedOrDamagedOne() = runTest {
+        val directory = folder.root.resolve("updates")
+        // Left by a download that was cut off, and a file of the wrong size under the final name
+        directory.resolve("ButcherPDA-60.apk.part").writeText("half")
+        directory.resolve("ButcherPDA-60.apk").writeText("too short")
+        val bytes = ByteArray(1000) { 7 }
+        server.enqueue(MockResponse.Builder().body(Buffer().write(bytes)).build())
+        val update = AvailableUpdate(60, "db0f460", server.url("/asset").toString(), bytes.size.toLong())
+
+        val apk = repository.download(update)
+
+        assertArrayEquals(bytes, apk.readBytes())
+        assertEquals(listOf("ButcherPDA-60.apk"), directory.listFiles().orEmpty().map { it.name })
+    }
 }

@@ -95,19 +95,30 @@ class UpdateRepository(
     }
 
     /**
-     * Downloads [update]'s APK, replacing any earlier download, and checks it arrived whole. [onProgress] gets the
-     * fraction done, from 0 to 1.
+     * [update]'s APK, downloaded and checked to have arrived whole, or the earlier download of it if that finished.
+     * [onProgress] gets the fraction done, from 0 to 1.
      */
     suspend fun download(update: AvailableUpdate, onProgress: (Float) -> Unit = {}): File {
         val target = File(directory, "ButcherPDA-${update.versionCode}.apk")
+        // Written under another name until it's whole, so a file under the final name is always a finished download
+        val partial = File(directory, "${target.name}.part")
+        val finished = withContext(Dispatchers.IO) {
+            directory.mkdirs()
+            // Earlier versions and unfinished downloads go; a finished download of this version stays
+            directory.listFiles()?.filter { it != target }?.forEach { it.delete() }
+            update.size > 0 && target.length() == update.size
+        }
+        // E.g. the installer was cancelled and Settings left before installing
+        if (finished) {
+            onProgress(1f)
+            return target
+        }
         val request = Request.Builder().url(update.downloadUrl).build()
         client.fetch(request) { response ->
             if (!response.isSuccessful) throw UpdateException("Download answered ${response.code}")
-            directory.mkdirs()
-            directory.listFiles()?.forEach { it.delete() }
             var copied = 0L
             response.body.byteStream().use { input ->
-                target.outputStream().use { output ->
+                partial.outputStream().use { output ->
                     val buffer = ByteArray(64 * 1024)
                     while (true) {
                         // Leaving Settings stops a download part-way
@@ -121,8 +132,13 @@ class UpdateRepository(
                 }
             }
             if (update.size > 0 && copied != update.size) {
-                target.delete()
+                partial.delete()
                 throw UpdateException("Downloaded $copied of ${update.size} bytes")
+            }
+            // Replaces a damaged file of the same name in one step
+            if (!partial.renameTo(target)) {
+                partial.delete()
+                throw UpdateException("Couldn't save the download")
             }
         }
         return target

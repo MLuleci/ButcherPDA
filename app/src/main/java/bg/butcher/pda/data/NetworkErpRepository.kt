@@ -78,7 +78,8 @@ class NetworkErpRepository(
             mapOf(
                 "fields" to fields.toString(),
                 "filters" to filters.toString(),
-                "order_by" to "item_name desc",
+                // A to Z by product name, then by BOM, so a product's BOMs keep the same order
+                "order_by" to "item_name asc, name asc",
                 "limit_page_length" to BOM_SEARCH_LIMIT.toString(),
             )
         ).data

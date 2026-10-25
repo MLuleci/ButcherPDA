@@ -40,7 +40,8 @@ Release builds use `isMinifyEnabled = true`, `isShrinkResources = true` and `pro
   - It sends `GET https://api.github.com/repos/MLuleci/ButcherPDA/releases/latest` with `Accept: application/vnd.github+json`, and no token, since the repo is public.
   - `GithubRelease.newerThan(installed)` picks the highest-code asset matching `ButcherPDA-(\d+)-([0-9a-f]+)\.apk` that's above `BuildConfig.VERSION_CODE`.
   - A 404, meaning nothing released yet, counts as up to date. Other errors and bad bodies throw `UpdateException`.
-- **Downloading:** the APK is streamed to `cacheDir/updates/ButcherPDA-<code>.apk`, replacing earlier downloads, with progress shown. A file that's shorter than the asset's `size` is deleted and refused. Leaving Settings cancels the download.
+- **Downloading:** the APK is streamed to `cacheDir/updates/ButcherPDA-<code>.apk.part`, with progress shown, and renamed to `ButcherPDA-<code>.apk` once its size matches the asset's `size`. So a file under the final name is always a finished download, and one cut off (e.g. by the app being killed) is never mistaken for one. A short file is deleted and refused. Leaving Settings cancels the download.
+- **Reusing a download:** if `ButcherPDA-<code>.apk` is already there at the right size, it's used without a request, e.g. after the installer was cancelled and Settings left. Other files in the folder (older versions, `.part` files) are deleted first. The check below still runs, so a damaged file that happens to be the right size is caught and deleted, and the next attempt downloads it again.
 - **Checking the file** (`data/UpdateInstaller.check`, using the API 23 calls `getPackageArchiveInfo(path, GET_SIGNATURES)` and `getPackageInfo`):
   - It must be this package, at the expected `versionCode`, signed with the installed app's key.
   - Some Android versions don't read a downloaded archive's signatures. Then the check is skipped, and the system installer still refuses a mismatch.
@@ -55,4 +56,4 @@ Release builds use `isMinifyEnabled = true`, `isShrinkResources = true` and `pro
   - **`api.github.com`** chains to Sectigo E46, then USERTrust ECC (`res/raw/usertrust_ecc.pem`, SHA-256 `4F:F4:60:D5:…:AD:7A`).
   - **The download host** (`release-assets.githubusercontent.com`) chains to Let's Encrypt, then ISRG Root X1.
 - **State:** the UI state is `UpdateState`: `Idle`, `Checking`, `UpToDate`, `Available`, `Downloading`, `Ready` or `Failed(UpdateError)`. The installer is opened through `SettingsUiEffect.Install`.
-- **Tests:** `UpdateRepositoryTest` covers parsing, the 404, errors, the download and a short file.
+- **Tests:** `UpdateRepositoryTest` covers parsing, the 404, errors, the download, a short file, reusing a finished download and replacing an unfinished one.

@@ -23,8 +23,8 @@ These are the project owner's standing preferences.
 - **No Claude attribution** in commit messages: no `Co-Authored-By` line.
 - **Commit style:** a short imperative subject in plain English, then a paragraph on what changed and why, e.g. "Use the stable minify settings for release builds". One commit per reviewed step.
 - **Don't touch the theme files:** `app/src/main/java/bg/butcher/pda/ui/theme/Color.kt`, `Theme.kt` and `Type.kt`, and `res/values*/themes.xml` and `colors.xml`. That includes tidy-ups such as removing the unused contrast schemes or changing the `dynamicColor` default. Ask before adding files next to them; `StatusColors.kt` and `Previews.kt` were added with approval.
-- **Building may not work on this machine.** The owner builds and tests on another machine with the Android SDK and the real PDA. Read changes carefully for compile errors, say what hasn't been built or run, and give the owner device test steps.
-- **Gradle memory stays at 2 GB** (`gradle.properties`). 4 GB strained the owner's machine alongside Android Studio.
+- **Say what's been tested.** Report whether a change was built, unit-tested or tried on the PDA, and give device test steps for anything that touches the scanner, printer or server.
+- **Gradle memory stays at 2 GB** (`gradle.properties`). 4 GB was too much alongside Android Studio.
 - **Debugging on the device:** launch the app normally, then use "Attach Debugger to Android Process". Launching in Debug can leave the scan engine off ([hardware.md](hardware.md)).
 
 ## Build and test

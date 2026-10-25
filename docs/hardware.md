@@ -30,7 +30,8 @@ The PDA's scanner and printer share one serial port, driven by the vendor SDK `a
   - anything else: `/dev/ttyMT1`.
 
   The GPIO pins also depend on the model.
-- **Print width:** 384 px, or 570 px when `Build.MODEL` contains `408`. A wider bitmap is squashed to that width (`zoomImg` scales only the width), not scaled evenly. The test device's `Build.MODEL` isn't recorded anywhere yet, so check the start-up log.
+- **Print width:** 384 px, or 570 px when `Build.MODEL` contains `408`. A wider bitmap is squashed to that width (`zoomImg` scales only the width), not scaled evenly.
+- **The device is a Qunsuo PDA-408.** Its model contains `408` (not `408P`), so the SDK uses `/dev/ttyMT3` and prints 570 px wide, which `PaperSize.MM_80` assumes. The exact `Build.MODEL` string is in the start-up log, and a different model in future could change both the port and the width.
 - **Text encoding:** `printText` encodes in GBK for the printer's ROM font, which may have no Cyrillic. The app prints bitmaps instead.
 - **zxing:** the JAR bundles an unrelocated zxing 3.5.1, so don't add zxing as a dependency.
 - **Logging:** the SDK logs every serial chunk at `Log.e`.
@@ -118,5 +119,4 @@ The PDA's scanner and printer share one serial port, driven by the vendor SDK `a
 
 - **Label sensing:** whether `labelEnable(true)` selects gap or black-mark sensing.
 - **`setStarNum`:** the unit of its value.
-- **The device model:** the test device's `Build.MODEL`. If it doesn't contain `408`, 570 px labels are squashed to 384 px wide.
 - **The keypad:** its Fn key (letters or digits) isn't visible to apps, so there's no mode indicator.

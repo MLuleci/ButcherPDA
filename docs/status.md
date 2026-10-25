@@ -41,10 +41,7 @@ As of commit `d842999` (October 2026): all the planned phases (0–7) are implem
 
 ## Open questions
 
-- **BOM search order:** it's `item_name desc` (Z to A). Should it be A to Z, or default BOMs first?
-- **The device model:** the test device's `Build.MODEL` is unknown. It decides the 384/570 px print width ([hardware.md](hardware.md)).
 - **Vendor questions:** gap or black-mark sensing for `labelEnable(true)`, and the unit of `setStarNum`.
-- **0% tolerance** isn't possible on the server, because Percent fields default to 0, which means "not set".
 - **Cyrillic sorting:** product names sort in Bulgarian order only if the database collation is Unicode. Not verified.
 - **Search edge cases:**
   - an item whose default BOM is removed drops out of Search, though it can still be found by a scan or an exact Enter;

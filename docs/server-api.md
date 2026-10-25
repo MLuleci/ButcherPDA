@@ -79,7 +79,7 @@ Responses are decoded with `erpJson = Json { ignoreUnknownKeys = true }`.
 
 | Call | Request | Wrapper | Used for |
 |---|---|---|---|
-| `searchBom` | `GET /api/resource/BOM`. `fields`: `name, item, item_name, uom, is_default, item.shelf_life_in_days as shelf_life_in_days, uom.must_be_whole_number as must_be_whole_number`. `filters`: `item_name like %q%`, `is_active = 1`, `docstatus = 1`. `order_by=item_name desc`, `limit_page_length=50` | `DataWrapper<List<BomSearchResultItem>>` | BOM picker on Start |
+| `searchBom` | `GET /api/resource/BOM`. `fields`: `name, item, item_name, uom, is_default, item.shelf_life_in_days as shelf_life_in_days, uom.must_be_whole_number as must_be_whole_number`. `filters`: `item_name like %q%`, `is_active = 1`, `docstatus = 1`. `order_by=item_name asc, name asc`, `limit_page_length=50` | `DataWrapper<List<BomSearchResultItem>>` | BOM picker on Start |
 | `getBatch` | `GET /api/resource/Batch` with `filters=[["name","=",batch]]` and `BATCH_FIELDS`. A one-row list, so link fields come through. An empty result becomes a 404 `ErpError.Http` | `DataWrapper<List<BatchDetails>>` | Batch dialog, Search scans and Enter, Details |
 | `searchBatches(query, filters, start)` | `GET /api/resource/Batch`. `filters`: `item.default_bom is set`, plus optional `manufacturing_date >= today−N` and `expiry_date >= today`. `or_filters` (only with text): `name like p`, `item.item_name like p`. `order_by`: `<field> <dir>, name desc`. `limit_start`, `limit_page_length=30` | same | Search list |
 | `getStockEntry` | `GET /api/resource/Stock Entry/{id}` | `DataWrapper<StockEntryDetails>` | Details: "ingredients used" are the rows with `is_finished_item == 0` |

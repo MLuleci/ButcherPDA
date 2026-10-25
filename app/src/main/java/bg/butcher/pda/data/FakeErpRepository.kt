@@ -182,7 +182,8 @@ class FakeErpRepository(
 
     override suspend fun searchBom(query: String): Result<List<BomSearchResultItem>> = respond {
         BOMS.filter { it.item.name.contains(query.trim(), ignoreCase = true) }
-            .sortedByDescending { it.item.name }
+            // As the server sorts: A to Z by product name, then by BOM
+            .sortedWith(compareBy({ it.item.name.lowercase() }, { it.name }))
             .map {
                 BomSearchResultItem(
                     name = it.name,

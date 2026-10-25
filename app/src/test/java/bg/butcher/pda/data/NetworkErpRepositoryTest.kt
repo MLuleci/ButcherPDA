@@ -70,6 +70,7 @@ class NetworkErpRepositoryTest {
             """[["item_name","like","%beef%"],["is_active","=",1],["docstatus","=",1]]""",
             url.queryParameter("filters"),
         )
+        assertEquals("item_name asc, name asc", url.queryParameter("order_by"))
         assertEquals(BOM_SEARCH_LIMIT.toString(), url.queryParameter("limit_page_length"))
     }
 

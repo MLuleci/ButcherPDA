@@ -26,7 +26,7 @@ Most rules are pure extensions on `FormUiState` in `ui/screens/FormRules.kt`, un
 - **`allowedRange(ingredient)`** is `required ± margin`:
   - for whole-number ingredients the margin is 0.5;
   - otherwise it's `required × tolerancePercent / 100`.
-  - `tolerancePercent` comes from `BomDetails`. It falls back to `DEFAULT_TOLERANCE_PERCENT = 5.0` only when the key is missing. The server always sends the resolved value, and a `0` from it would mean 0%.
+  - `tolerancePercent` comes from `BomDetails`. It falls back to `DEFAULT_TOLERANCE_PERCENT = 5.0` only when the key is missing. The server always sends the resolved value. A 0% tolerance can't be set: the server treats 0 as "not set" ([server-api.md](server-api.md)).
 - **`coverage(ingredient)`**, where "chosen" is the sum of that ingredient's batch quantities:
   - `MISSING` when chosen is 0;
   - `UNDER` when chosen is below `start − EPSILON`;
@@ -116,5 +116,5 @@ Every submit carries a `request_id` (a UUID in `FormUiState.requestId`). The ser
 ## BOM search
 
 - **The request:** active, submitted BOMs whose item name contains the text (LIKE with escaping), with a fixed 50-row limit (`BOM_SEARCH_LIMIT`).
-- **Sort:** `item_name desc`. This is still an open question ([status.md](status.md)).
+- **Sort:** product name A to Z, then BOM name (`item_name asc, name asc`), so a product's BOMs stay in the same order.
 - **The star** marks the item's default BOM.
