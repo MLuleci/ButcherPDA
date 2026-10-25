@@ -8,7 +8,7 @@ The server work ([04-server-changes.md](04-server-changes.md)) is done. This is 
 
 Section references point to [00-summary.md](00-summary.md) unless another file is named. "§1 #3" means item 3 in the summary's section 1 table.
 
-**Progress:** Phases 0–5 are done. Steps marked *(done)* are committed and pushed. Where the implementation made a decision the plan left open, or differs from it, there's an **Implementation notes** list under the step.
+**Progress:** Phases 0–5 are done. Phase 6 is built and pushed, but not yet confirmed on the device. Steps marked *(done)* are committed and pushed. Where the implementation made a decision the plan left open, or differs from it, there's an **Implementation notes** list under the step.
 
 ---
 
@@ -374,10 +374,26 @@ The design is in 2.14 (summary). Search and Details only need Phase 1 (the netwo
 - **`FakeErpRepository`:** batches with a mix of expiry dates, and a fake Stock Entry with several ingredient batches.
 - **Tests:** `expiryStatus` (each boundary), MockWebServer tests for both new calls, and decoding a real Stock Entry response, child rows included.
 
+**Implementation notes:**
+- **One batch request:** `getBatch` itself now uses the one-row list request (`fields` with the `item.*` links, `filters=[["name","=",<batch>]]`), for the batch dialog, Search and Details alike. The single-document `/api/resource/Batch/<id>` endpoint is gone. The list request matches names regardless of case, like the old one, and an empty result is a 404. A missing batch now carries the app's own "not found" text rather than the server's, which nothing shows.
+- **`BatchDetails.defaultBom`:** comes through `item.default_bom` (null for raw materials). It's how Details tells a batch is "made here".
+- **`BatchFilters` / `BatchSort`:** in `model/BatchFilters.kt`. `@Serializable`, so Search saves them as JSON. `withSort` also picks that sort's usual direction.
+- **Stock Entry:** `StockEntryDetails.ingredients` is every row that isn't the finished item. `create_manufacture_entry` adds one row per batch, so an ingredient drawn from two batches shows as two rows.
+- **Today's date:** `NetworkErpRepository` takes a `today` provider, so the tests can fix the date behind the day limit and "hide expired".
+- **The fake:** five finished batches, one for each expiry state (expired, today, tomorrow, next week, none), each with a Stock Entry. A submit stores a Stock Entry too.
+- **Tests:** the real Stock Entry is saved as `test/resources/stock_entry.json`. The unused `FakeDataSource`, `FakeErpService` and `FakeNetworkErpRepository` test fakes are removed.
+
 ### Step 6.2: Navigation
 - **A `batches` graph:** Search, then `Details/{batch}`.
 - **Type-safe routes.** Either move to them now, or fix `MainScreen.valueOf(route)` for routes with arguments (2.14 part 1; 02, finding 17). Type-safe routes are recommended, and this is the first route that needs an argument.
 - **Show the Search button** on Home again (it was hidden in step 2.1).
+
+**Implementation notes:**
+- **Type-safe routes:** in `ui/Routes.kt`, `@Serializable` objects (`Home`, `Settings`, `ManufactureGraph`, `Start`, `Form`, `Summary`, `BatchesGraph`, `Search`) and `data class Details(val batch: String)`. `MainScreen` and `MANUFACTURE_GRAPH` are gone.
+- **Titles:** `NavDestination?.title()` matches the destination against the route classes with `hasRoute`.
+- **Home's buttons** take a route object. The `Settings` route is imported as `SettingsRoute` in `HomeScreen.kt`, since it clashes with the Settings icon.
+- **Filters reset on each visit:** going back to Home pops `BatchesGraph`, so Search starts with the defaults without extra code.
+- *The navigation was confirmed working on the device, with the placeholder Search and Details screens.*
 
 ### Step 6.3: Search page
 - **`SearchViewModel`:**
@@ -394,6 +410,15 @@ The design is in 2.14 (summary). Search and Details only need Phase 1 (the netwo
   - Result rows showing product, batch, quantity, both dates and the ⚠ from `expiryStatus`. "Load more" at the bottom.
 - **Scanner:** `OnScan` on this route.
 
+**Implementation notes:**
+- **Enter vs scan:** a scan of an unknown batch shows "Batch not found." under the field. Enter on typed text that isn't a batch number shows no error and keeps the list, which may be empty with "No results" (confirmed as the intended behaviour).
+- **Filter sheet:** `components/BatchFilterSheet.kt` edits a draft, saved across rotation, and applies it when the sheet closes, however it's closed. The order buttons are a segmented pair whose labels follow the sort. A day limit that isn't a whole number keeps the previous one. The Bulgarian expiry labels are the shorter "Най-скоро / Най-късно".
+- **Sheet and scans:** the sheet's open state lives in the route, which closes it before opening Details. A scan with the sheet open doesn't bring the sheet back on return.
+- **Paging:** a new search cancels a "Load more" in flight, so an old page can't land on new results.
+- **Rows:** `components/BatchResultRow.kt`, with dates as `dd.MM.yyyy` (`util/Dates.kt`'s `shortDate`). The ⚠ shows for expired, today and soon.
+- **`SearchField`** gains `placeholder` and `onSearch` (Enter). The BOM search is unchanged.
+- **Saved-state keys:** Search's are in `SavedSearch`, since a second top-level `Saved` in the package clashed with Form's at build time.
+
 ### Step 6.4: Details page
 - **`DetailsViewModel(batch)`:** load the Batch, then the Stock Entry from `reference_name`. Each has its own loading and error state, with Retry for the ingredients alone.
 - **Screen:**
@@ -403,6 +428,14 @@ The design is in 2.14 (summary). Search and Details only need Phase 1 (the netwo
   - A "not produced with this app" state for other batches (no Print button).
 - **Scanner:** `OnScan` on this route. A scan replaces the Details with `popUpTo(Details) { inclusive = true }`, so Back always goes to Search.
 
+**Implementation notes:**
+- **The ViewModel** takes the batch number directly, and only its factory reads the route (`SavedStateHandle.toRoute`), so it can be tested without Android.
+- **No Stock Entry request** for a batch that isn't made here, or has no `reference_name`, so a supplier's label never fetches a Material Receipt as if it were production.
+- **Scans:** a scan is looked up first and only replaces the page once found. An unknown batch or a code that isn't a batch label shows a toast and keeps the current batch.
+- **Banner:** `tertiaryContainer` for "soon" until Phase 7's status colours. "Expires in N days" uses the `expires_in_days_banner` plurals (ден / дни).
+- **`LabelledValue`:** Summary's private `SummaryLine` is now shared in `components/`.
+- **Scan sounds, across every scanning screen:** `beep1` for an accepted scan and `beep3` for a time-out or an invalid scanned value (not a batch label, not found; on Form also already added or not in the recipe). Network and server errors are silent. Typing plus Enter on Search is never a scan, so it never beeps.
+
 ### Step 6.5: Label printer
 - **`LabelData`:** `toLabel()` for `ManufactureEntry` (Summary) and `BatchDetails` (Details).
 - **QR content:** `batchUrl(...)`, built from the Settings base URL (2.11 part 5).
@@ -410,12 +443,27 @@ The design is in 2.14 (summary). Search and Details only need Phase 1 (the netwo
 - **`QsPdaLabelPrinter`:** check `mComFd` and `isCanprint`, then call `printBitmap(1, bmp, true)` on the main thread (05, section 4).
 - **Print buttons** on Details and Summary: disabled while printing, a toast on failure, re-printable.
 
+**Implementation notes:**
+- **Vendor documentation:** "408 Print & Scan Integrated Doc" confirms 384 px for 58 mm paper and 570 px for 80 mm, black and white only, and print results `0` (printed) and `1` (no paper). Its code figures are screenshots of the vendor demo (`MainActivity.java`). It asks for a 5–7 mm blank margin above the gap, or the printer feeds an extra blank label.
+- **Label layout:** `hardware/LabelRenderer.kt` draws one black-and-white bitmap. The QR code is on the left. Beside it are the product name (up to two lines), batch number, quantity, `P:` / `E:` dates (`П:` / `Г:`) and Stock Entry ID. Only the dates have captions. The quantity and both dates always print whole; the name, batch number and Stock Entry ID may end in "…". The text starts at 28 px and shrinks to fit, down to 20 px. Anti-aliasing is off, since the printer can't print grey.
+- **QR code:** the batch URL from `batchUrl`, level M, with no character set hint so it gets no ECI prefix. It takes what's left beside the dates, up to the label's height, and is capped at 180 px (about 22 mm) on 58 mm paper so the batch number stays readable.
+- **SDK buffer bug:** `PrintUtils.draw2PxPoint` sends the picture in 24-row bands, but its buffer is too short for a partial last band on 570 px paper, so the end of the job was silently cut off (15 bytes at 80 × 40 mm). `labelBitmapHeight` rounds the bitmap down to whole bands. `LabelRendererTest` checks every allowed height on both papers against the SDK's formula.
+- **Paper settings:** "Label paper" (80 mm, the default, or 58 mm) and "Label height" (30–150 mm, default 40) in Settings. Below 30 mm the text no longer fits beside the QR code. The width is drawn as is: the SDK only scales bitmaps down when they're wider than the printer.
+- **Print result:** the printer checks `mComFd` and `isCanprint` first, then waits up to 4 s for `com.qs.getmassage`. `1` fails the print; `0`, or no broadcast at all, counts as sent. If the printer stops being ready within the SDK's 200 ms delay, it drops the job silently and the app still reports success.
+- **Device printer:** `AppContainer` uses `QsPdaLabelPrinter` when `QsPdaHardware.available`, otherwise `FakeLabelPrinter`.
+- **Not testable locally:** the bitmap itself; `LabelRendererTest` covers only the size calculations. Check on paper.
+- **No QR code:** the QR is only drawn when the Settings base URL is valid. With it empty (e.g. a fake-ERP build), the label prints text only.
+- **Paper type:** Settings has "Labels with gaps" (the default) or "Continuous roll". The printer has a gap sensor: in label mode it feeds to the next gap on paper load and after each print (`isLabel = true` sends `1D 0C`). On a plain roll there's no gap, so it runs out about 225 mm each time. For a continuous roll the app turns label mode off (`labelEnable(false)`, sent after the SDK's start-up reset and again whenever the setting changes), prints with `isLabel = false` and adds 12 mm of blank paper (`TEAR_OFF_ROWS`) to clear the tear bar.
+- **Die-cut labels:** 80 mm labels are slightly too wide for the test device's paper bay. 58 mm is still to be tried.
+
 **Done when:**
 - On the device, scanning a label on Search opens its Details, with the expiry banner and ingredients.
 - Scanning another label on Details shows that batch, and Back goes to Search.
 - Search opens on the latest batches. Typing "saus" lists the sausage batches. Sorting by expiry or product name reorders the list. Limiting to 7 days and hiding expired batches narrow it, and the ⚙ dot shows they're active.
 - Raw-material batches (e.g. BEEF.0001) don't appear in the list.
 - A label printed from Details scans back to the same page.
+
+*Built and pushed; the device check above hasn't been reported yet.*
 
 ---
 
@@ -428,6 +476,8 @@ The design is in 2.14 (summary). Search and Details only need Phase 1 (the netwo
   - Turn on R8 and check the SDK still works with the keep rules (05, section 7).
   - Set up signing (01, finding 17).
 - **Leftovers:** the remaining tidy-ups (typos, unused imports, package moves, consistent error types) from 01, 02 and 03.
+- **Keyboard suggestions:** turn off suggestions and autocorrect outside the search fields. A `NoSuggestions` wrapper using `InterceptPlatformTextInput` is in `git stash` ("Turn off keyboard suggestions outside search fields"), but it's from before Phase 5's changes to those fields, so it needs reapplying by hand.
+- **Emulator scanning:** there's no way to trigger `FakeBarcodeScanner` on the emulator yet (Step 5.3).
 
 ---
 
