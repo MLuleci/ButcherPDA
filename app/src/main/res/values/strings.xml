@@ -115,6 +115,9 @@
     <string name="paper_size_label">Label paper</string>
     <string name="paper_80mm">80 mm</string>
     <string name="paper_58mm">58 mm</string>
+    <string name="paper_type_label">Paper type</string>
+    <string name="paper_type_labels">Labels with gaps</string>
+    <string name="paper_type_continuous">Continuous roll</string>
     <string name="label_height_label">Label height</string>
     <string name="invalid_label_height">Enter a whole number from %1$d to %2$d.</string>
     <string name="millimetres">mm</string>

@@ -32,13 +32,23 @@ class LabelRendererTest {
         for (mm in LABEL_HEIGHT_RANGE_MM) {
             val height = labelBitmapHeight(mm)
             assertEquals("$mm mm", 0, height % 24)
-            PaperSize.entries.forEach { paper ->
-                // What PrintUtils.draw2PxPoint writes, against what it allocates
-                val needed = 3 + height / 24 * (6 + 3 * paper.widthPx)
-                assertTrue("$paper at $mm mm", needed <= paper.widthPx * height / 8 + 1200)
+            // With the tear-off paper of a plain roll too
+            listOf(height, height + feedHeight(TEAR_OFF_ROWS)).forEach { total ->
+                PaperSize.entries.forEach { paper ->
+                    // What PrintUtils.draw2PxPoint writes, against what it allocates
+                    val needed = 3 + total / 24 * (6 + 3 * paper.widthPx)
+                    assertTrue("$paper at $mm mm", needed <= paper.widthPx * total / 8 + 1200)
+                }
             }
             assertTrue("$mm mm leaves too little margin", height <= mm * DOTS_PER_MM - 6 * DOTS_PER_MM)
         }
+    }
+
+    @Test
+    fun feedHeight_roundsUpToWholeBands() {
+        assertEquals(0, feedHeight(0))
+        assertEquals(24, feedHeight(1))
+        assertEquals(96, feedHeight(TEAR_OFF_ROWS))
     }
 
     @Test

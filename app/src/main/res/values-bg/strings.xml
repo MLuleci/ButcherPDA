@@ -116,6 +116,9 @@
     <string name="paper_size_label">Хартия за етикети</string>
     <string name="paper_80mm">80 мм</string>
     <string name="paper_58mm">58 мм</string>
+    <string name="paper_type_label">Вид хартия</string>
+    <string name="paper_type_labels">Етикети с разстояние</string>
+    <string name="paper_type_continuous">Непрекъсната ролка</string>
     <string name="label_height_label">Височина на етикета</string>
     <string name="invalid_label_height">Въведете цяло число от %1$d до %2$d.</string>
     <string name="millimetres">мм</string>

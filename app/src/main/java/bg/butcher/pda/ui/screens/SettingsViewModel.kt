@@ -10,6 +10,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import bg.butcher.pda.MainApplication
 import bg.butcher.pda.data.DEFAULT_LABEL_HEIGHT_MM
 import bg.butcher.pda.data.PaperSize
+import bg.butcher.pda.data.PaperType
 import bg.butcher.pda.data.PdaSettings
 import bg.butcher.pda.data.SettingsRepository
 import bg.butcher.pda.data.normaliseApiKey
@@ -37,6 +38,7 @@ data class SettingsUiState(
     val apiKey: SettingState = SettingState(),
     val paperSize: PaperSize = PaperSize.MM_80,
     val labelHeight: SettingState = labelHeightState(DEFAULT_LABEL_HEIGHT_MM.toString()),
+    val paperType: PaperType = PaperType.LABELS,
 ) {
     val canSave: Boolean
         get() = isLoaded && isDirty && baseUrl.isValid && apiKey.isValid && labelHeight.isValid
@@ -66,6 +68,7 @@ class SettingsViewModel(private val settingsRepository: SettingsRepository): Vie
                         apiKey = apiKeyState(settings.apiKey),
                         paperSize = settings.paperSize,
                         labelHeight = labelHeightState(settings.labelHeightMm.toString()),
+                        paperType = settings.paperType,
                     )
                 }
             }
@@ -84,6 +87,10 @@ class SettingsViewModel(private val settingsRepository: SettingsRepository): Vie
         _uiState.update { it.copy(isDirty = true, paperSize = size) }
     }
 
+    fun setPaperType(type: PaperType) {
+        _uiState.update { it.copy(isDirty = true, paperType = type) }
+    }
+
     fun setLabelHeight(mm: String) {
         _uiState.update { it.copy(isDirty = true, labelHeight = labelHeightState(mm)) }
     }
@@ -97,7 +104,7 @@ class SettingsViewModel(private val settingsRepository: SettingsRepository): Vie
         _uiState.update { it.copy(isDirty = false) }
         viewModelScope.launch {
             try {
-                settingsRepository.update(PdaSettings(baseUrl.toString(), apiKey, state.paperSize, labelHeight))
+                settingsRepository.update(PdaSettings(baseUrl.toString(), apiKey, state.paperSize, labelHeight, state.paperType))
                 _uiState.update {
                     if (it.isDirty) it else it.copy(baseUrl = baseUrlState(baseUrl.toString()), apiKey = apiKeyState(apiKey))
                 }

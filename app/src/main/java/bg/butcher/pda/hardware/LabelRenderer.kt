@@ -24,6 +24,10 @@ private const val GAP = 10
 // About 6 mm: printing closer to the gap makes the printer feed an extra blank label
 private const val BOTTOM_MARGIN = 6 * DOTS_PER_MM
 
+// On a plain roll: blank paper after the label, to take it past the tear bar. The printer can't feed by itself
+// there, since it has no gap to feed to
+const val TEAR_OFF_ROWS = 12 * DOTS_PER_MM
+
 // The SDK sends the picture in bands of 24 rows, and its buffer is too short for a partial last band on
 // 570 px paper, which silently cuts the end of the job off (e.g. at 80 x 40 mm)
 private const val BAND_ROWS = 24
@@ -87,6 +91,9 @@ private fun widest(lines: List<String>, size: Float): Int =
 /** Whole bands only, rounding down so the bottom margin only grows. */
 fun labelBitmapHeight(labelHeightMm: Int): Int = (labelHeightMm * DOTS_PER_MM - BOTTOM_MARGIN) / BAND_ROWS * BAND_ROWS
 
+/** [rows] rounded up to whole bands. */
+fun feedHeight(rows: Int): Int = (rows + BAND_ROWS - 1) / BAND_ROWS * BAND_ROWS
+
 /**
  * The QR code's side: what's left beside the dates at their smallest, up to the label's height and [maxSize].
  * [datesWidth] is the widest of the lines that must print whole.
@@ -100,6 +107,7 @@ fun qrSize(width: Int, labelHeightMm: Int, datesWidth: Int, maxSize: Int = Int.M
  * The whole label as one bitmap, so it prints as one job with one feed, and Cyrillic needs no printer font.
  * The QR code is as large as the label allows on the left. The quantity and both dates always print whole beside
  * it, at the largest size that fits; the product name, batch number and Stock Entry ID may be cut short.
+ * [feedRows] of blank paper follow the label.
  */
 fun renderLabel(
     label: LabelData,
@@ -108,6 +116,7 @@ fun renderLabel(
     width: Int,
     labelHeightMm: Int,
     maxQrSize: Int = Int.MAX_VALUE,
+    feedRows: Int = 0,
 ): Bitmap {
     val height = labelBitmapHeight(labelHeightMm)
     val contentHeight = height - 2 * PADDING
@@ -132,7 +141,7 @@ fun renderLabel(
         text = textBlock(label, wholeLines, textWidth, size)
     }
 
-    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val bitmap = Bitmap.createBitmap(width, height + feedHeight(feedRows), Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
     canvas.drawColor(Color.WHITE)
     qrContent?.takeIf { qrSize > 0 }?.let {

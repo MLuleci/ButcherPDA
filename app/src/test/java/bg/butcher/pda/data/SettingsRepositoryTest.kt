@@ -38,7 +38,9 @@ class SettingsRepositoryTest {
 
     @Test
     fun paperSize_isSavedWithTheOtherSettings() = runTest {
-        val settings = PdaSettings("https://erp.example.bg/", "key:secret", PaperSize.MM_58, labelHeightMm = 30)
+        val settings = PdaSettings(
+            "https://erp.example.bg/", "key:secret", PaperSize.MM_58, labelHeightMm = 30, PaperType.CONTINUOUS,
+        )
 
         repository.update(settings)
 
@@ -50,6 +52,15 @@ class SettingsRepositoryTest {
         dataStore.edit { it[stringPreferencesKey("paper_size")] = "MM_110" }
 
         assertEquals(PaperSize.MM_80, repository.settings.first().paperSize)
+    }
+
+    @Test
+    fun paperType_defaultsToLabelsAndIgnoresUnknownValues() = runTest {
+        assertEquals(PaperType.LABELS, repository.settings.first().paperType)
+
+        dataStore.edit { it[stringPreferencesKey("paper_type")] = "FANFOLD" }
+
+        assertEquals(PaperType.LABELS, repository.settings.first().paperType)
     }
 
     @Test

@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import androidx.core.content.ContextCompat
 import bg.butcher.pda.R
+import bg.butcher.pda.data.PaperType
 import bg.butcher.pda.data.PdaSettings
 import bg.butcher.pda.data.normaliseBaseUrl
 import com.qs.wiget.PrintUtils
@@ -38,9 +39,12 @@ class QsPdaLabelPrinter(
         // The SDK only scales down bitmaps wider than the printer, so this is printed as drawn
         val current = settings()
         val url = normaliseBaseUrl(current.baseUrl)?.let { batchUrl(it, label.batchNumber) }
+        // On a plain roll the label ends with its own blank paper, instead of the printer feeding to the gap
+        val continuous = current.paperType == PaperType.CONTINUOUS
         val bitmap = withContext(Dispatchers.Default) {
             val paper = current.paperSize
-            renderLabel(label, captions, url, paper.widthPx, current.labelHeightMm, paper.maxQrPx)
+            val feedRows = if (continuous) TEAR_OFF_ROWS else 0
+            renderLabel(label, captions, url, paper.widthPx, current.labelHeightMm, paper.maxQrPx, feedRows)
         }
 
         // The print call returns at once; the only result is a status broadcast, which may not come
@@ -55,7 +59,7 @@ class QsPdaLabelPrinter(
                     context, receiver, IntentFilter(STATUS_ACTION), ContextCompat.RECEIVER_EXPORTED,
                 )
                 // Its handlers need the main looper
-                withContext(Dispatchers.Main) { PrintUtils.printBitmap(1, bitmap, true) }
+                withContext(Dispatchers.Main) { PrintUtils.printBitmap(1, bitmap, !continuous) }
                 awaitClose { context.unregisterReceiver(receiver) }
             }.first()
         }

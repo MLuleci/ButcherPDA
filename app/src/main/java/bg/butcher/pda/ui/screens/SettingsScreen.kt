@@ -32,6 +32,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import bg.butcher.pda.R
 import bg.butcher.pda.data.LABEL_HEIGHT_RANGE_MM
 import bg.butcher.pda.data.PaperSize
+import bg.butcher.pda.data.PaperType
 
 @Composable
 fun ValidatedTextField(
@@ -78,9 +79,23 @@ private fun PaperSize.label(): Int = when (this) {
     PaperSize.MM_58 -> R.string.paper_58mm
 }
 
+@StringRes
+private fun PaperType.label(): Int = when (this) {
+    PaperType.LABELS -> R.string.paper_type_labels
+    PaperType.CONTINUOUS -> R.string.paper_type_continuous
+}
+
+/** A read-only field that opens a list of [options]. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PaperSizeSelect(selected: PaperSize, onSelect: (PaperSize) -> Unit, enabled: Boolean) {
+private fun <T> OptionSelect(
+    @StringRes label: Int,
+    options: List<T>,
+    selected: T,
+    optionLabel: (T) -> Int,
+    onSelect: (T) -> Unit,
+    enabled: Boolean,
+) {
     var expanded by remember { mutableStateOf(false) }
     ExposedDropdownMenuBox(
         expanded = expanded,
@@ -88,22 +103,22 @@ private fun PaperSizeSelect(selected: PaperSize, onSelect: (PaperSize) -> Unit, 
         modifier = Modifier.padding(10.dp),
     ) {
         OutlinedTextField(
-            value = stringResource(selected.label()),
+            value = stringResource(optionLabel(selected)),
             onValueChange = {},
             readOnly = true,
             enabled = enabled,
-            label = { Text(stringResource(R.string.paper_size_label)) },
+            label = { Text(stringResource(label)) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier
                 .fillMaxWidth()
                 .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled)
         )
         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            PaperSize.entries.forEach { size ->
+            options.forEach { option ->
                 DropdownMenuItem(
-                    text = { Text(stringResource(size.label())) },
+                    text = { Text(stringResource(optionLabel(option))) },
                     onClick = {
-                        onSelect(size)
+                        onSelect(option)
                         expanded = false
                     },
                 )
@@ -138,9 +153,20 @@ fun SettingsScreen(
             keyboardType = KeyboardType.Password,
             visualTransformation = PasswordVisualTransformation(),
         )
-        PaperSizeSelect(
+        OptionSelect(
+            label = R.string.paper_size_label,
+            options = PaperSize.entries,
             selected = uiState.paperSize,
+            optionLabel = { it.label() },
             onSelect = viewModel::setPaperSize,
+            enabled = uiState.isLoaded,
+        )
+        OptionSelect(
+            label = R.string.paper_type_label,
+            options = PaperType.entries,
+            selected = uiState.paperType,
+            optionLabel = { it.label() },
+            onSelect = viewModel::setPaperType,
             enabled = uiState.isLoaded,
         )
         ValidatedTextField(

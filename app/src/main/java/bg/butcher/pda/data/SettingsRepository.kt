@@ -26,6 +26,12 @@ enum class PaperSize(val widthPx: Int, val maxQrPx: Int) {
     MM_58(384, 180),
 }
 
+/**
+ * Die-cut labels, where the printer feeds to the gap after each label, or a plain roll. Feeding to the gap on a
+ * plain roll runs out a long length of blank paper, since there's no gap to find.
+ */
+enum class PaperType { LABELS, CONTINUOUS }
+
 const val DEFAULT_LABEL_HEIGHT_MM = 40
 
 // Below 30 mm the text no longer fits beside the QR code; the upper limit is only a guard against typos
@@ -36,6 +42,7 @@ data class PdaSettings(
     val apiKey: String = "",
     val paperSize: PaperSize = PaperSize.MM_80,
     val labelHeightMm: Int = DEFAULT_LABEL_HEIGHT_MM,
+    val paperType: PaperType = PaperType.LABELS,
 )
 
 /** A whole number of millimetres within [LABEL_HEIGHT_RANGE_MM]. */
@@ -60,6 +67,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val API_KEY = stringPreferencesKey("api_key")
         val PAPER_SIZE = stringPreferencesKey("paper_size")
         val LABEL_HEIGHT = intPreferencesKey("label_height_mm")
+        val PAPER_TYPE = stringPreferencesKey("paper_type")
     }
 
     val settings: Flow<PdaSettings> = dataStore.data
@@ -70,6 +78,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
                 apiKey = p[Keys.API_KEY].orEmpty(),
                 paperSize = PaperSize.entries.firstOrNull { it.name == p[Keys.PAPER_SIZE] } ?: PaperSize.MM_80,
                 labelHeightMm = p[Keys.LABEL_HEIGHT]?.takeIf { it in LABEL_HEIGHT_RANGE_MM } ?: DEFAULT_LABEL_HEIGHT_MM,
+                paperType = PaperType.entries.firstOrNull { it.name == p[Keys.PAPER_TYPE] } ?: PaperType.LABELS,
             )
         }
 
@@ -79,6 +88,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             p[Keys.API_KEY] = settings.apiKey
             p[Keys.PAPER_SIZE] = settings.paperSize.name
             p[Keys.LABEL_HEIGHT] = settings.labelHeightMm
+            p[Keys.PAPER_TYPE] = settings.paperType.name
         }
     }
 }

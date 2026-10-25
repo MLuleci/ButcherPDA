@@ -16,6 +16,16 @@ object QsPdaHardware {
     var available = false
         private set
 
+    // Gap mode until the saved paper type is read; it can only be sent once the SDK's reset is done
+    private var labelMode = true
+    private var isSetUp = false
+
+    /** On the main thread. On for die-cut labels, off for a plain roll, where looking for the gap runs paper out. */
+    fun setLabelMode(enabled: Boolean) {
+        labelMode = enabled
+        if (isSetUp) PrintUtils.labelEnable(enabled)
+    }
+
     /** Once per process, on the main thread: a second call leaks a serial port and a reader thread. */
     fun init(app: Application) {
         Log.i(TAG, "Build.MODEL = ${Build.MODEL}")
@@ -26,7 +36,8 @@ object QsPdaHardware {
             // The SDK fails silently when the port is busy, e.g. still held by the previous process
             Log.i(TAG, "Serial port fd = ${PrintUtils.mComFd}")
             Handler(Looper.getMainLooper()).postDelayed({
-                PrintUtils.labelEnable(true)
+                isSetUp = true
+                PrintUtils.labelEnable(labelMode)
                 PrintUtils.setStarNum(30)
             }, LABEL_SETUP_DELAY_MS)
             available = true
