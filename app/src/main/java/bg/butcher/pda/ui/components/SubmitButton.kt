@@ -1,6 +1,7 @@
 package bg.butcher.pda.ui.components
 
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -11,6 +12,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import bg.butcher.pda.ui.theme.AppTheme
 
+/** The page's main action, as tall as the outlined buttons beside it. */
 @Composable
 fun SubmitButton(
     label: String,
@@ -22,7 +24,7 @@ fun SubmitButton(
     Button(
         enabled = !isLoading && enabled,
         onClick = onClick,
-        modifier = modifier.fillMaxWidth(.9f)
+        modifier = modifier.fillMaxWidth(.9f).heightIn(min = 56.dp)
     ) {
         if (isLoading) {
             CircularProgressIndicator(

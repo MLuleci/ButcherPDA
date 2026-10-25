@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Checkbox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -22,9 +21,9 @@ import bg.butcher.pda.R
 import bg.butcher.pda.model.BomSearchResultItem
 import bg.butcher.pda.network.NetworkState
 import bg.butcher.pda.ui.components.BomSelect
+import bg.butcher.pda.ui.components.CheckboxRow
 import bg.butcher.pda.ui.components.ExpiryInput
 import bg.butcher.pda.ui.components.QuantityInput
-import bg.butcher.pda.ui.components.RowWithLabel
 import bg.butcher.pda.ui.components.SubmitButton
 import bg.butcher.pda.ui.theme.AppTheme
 import bg.butcher.pda.util.formatDecimal
@@ -86,23 +85,15 @@ fun StartScreen(
                 defaultDays = selected?.shelfLife?.takeIf { state.expiryTyped && it > 0 },
                 modifier = Modifier.fillMaxWidth(),
             )
-            RowWithLabel(
+            CheckboxRow(
                 label = R.string.explode_label,
-                content = {
-                    Checkbox(
-                        checked = state.explode,
-                        onCheckedChange = onExplodeChanged
-                    )
-                }
+                checked = state.explode,
+                onCheckedChange = onExplodeChanged,
             )
-            RowWithLabel(
+            CheckboxRow(
                 label = R.string.finished_label,
-                content = {
-                    Checkbox(
-                        checked = state.isFinished,
-                        onCheckedChange = onFinishedChanged
-                    )
-                }
+                checked = state.isFinished,
+                onCheckedChange = onFinishedChanged,
             )
         }
         SubmitButton(

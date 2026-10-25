@@ -9,10 +9,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -129,20 +127,11 @@ fun BatchFilterSheet(
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp)
-                    .toggleable(
-                        value = draft.hideExpired,
-                        role = Role.Checkbox,
-                        onValueChange = { draft = draft.copy(hideExpired = it) },
-                    )
-            ) {
-                Checkbox(checked = draft.hideExpired, onCheckedChange = null)
-                Text(stringResource(R.string.hide_expired_label), modifier = Modifier.padding(start = 12.dp))
-            }
+            CheckboxRow(
+                label = R.string.hide_expired_label,
+                checked = draft.hideExpired,
+                onCheckedChange = { draft = draft.copy(hideExpired = it) },
+            )
 
             ConfirmCancelButtons(
                 confirmLabel = stringResource(R.string.done_label),

@@ -6,15 +6,18 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,29 +54,33 @@ fun HomeScreen(
         modifier = modifier.fillMaxSize(),
     ) {
         buttons.forEachIndexed { index, item ->
-            val title = stringResource(item.title)
             if (index > 0) {
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(20.dp))
             }
-            TextButton(
+            // Large enough to press with gloves
+            OutlinedButton(
                 onClick = { onButtonClicked(item.route) },
-                modifier = Modifier.width(150.dp),
+                modifier = Modifier
+                    .fillMaxWidth(.8f)
+                    .heightIn(min = 80.dp),
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Icon(imageVector = item.icon, contentDescription = title)
-                    Text(title)
+                    // The label says what it is
+                    Icon(imageVector = item.icon, contentDescription = null, modifier = Modifier.size(32.dp))
+                    Text(stringResource(item.title), style = MaterialTheme.typography.titleLarge)
                 }
             }
         }
     }
 }
 
-@Preview
+@Preview(showBackground = true)
 @Composable
-fun StartScreenPreview() {
+fun HomeScreenPreview() {
     AppTheme {
         HomeScreen()
     }
