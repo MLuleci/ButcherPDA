@@ -1,6 +1,7 @@
 package bg.butcher.pda.ui.screens
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -45,14 +46,13 @@ fun ValidatedTextField(
     enabled: Boolean,
     placeholder: String? = null,
     keyboardType: KeyboardType = KeyboardType.Text,
+    modifier: Modifier = Modifier,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     suffix: String? = null,
 ) {
     val showError = enabled && !state.isValid
     OutlinedTextField(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(10.dp),
+        modifier = modifier,
         value = state.value,
         onValueChange = onChanged,
         label = { Text(label) },
@@ -97,12 +97,13 @@ private fun <T> OptionSelect(
     optionLabel: (T) -> Int,
     onSelect: (T) -> Unit,
     enabled: Boolean,
+    modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
     ExposedDropdownMenuBox(
         expanded = expanded,
         onExpandedChange = { if (enabled) expanded = it },
-        modifier = Modifier.padding(10.dp),
+        modifier = modifier,
     ) {
         OutlinedTextField(
             value = stringResource(optionLabel(selected)),
@@ -140,52 +141,63 @@ fun SettingsScreen(
     onSave: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.verticalScroll(rememberScrollState())) {
-        ValidatedTextField(
-            label = stringResource(R.string.base_url_label),
-            error = stringResource(R.string.invalid_base_url),
-            state = uiState.baseUrl,
-            onChanged = onBaseUrlChange,
-            enabled = uiState.isLoaded,
-            placeholder = "https://erp.example.com",
-            keyboardType = KeyboardType.Uri,
-        )
-        ValidatedTextField(
-            label = stringResource(R.string.api_key_label),
-            error = stringResource(R.string.invalid_api_key),
-            state = uiState.apiKey,
-            onChanged = onApiKeyChange,
-            enabled = uiState.isLoaded,
-            placeholder = "api_key:api_secret",
-            keyboardType = KeyboardType.Password,
-            visualTransformation = PasswordVisualTransformation(),
-        )
-        OptionSelect(
-            label = R.string.paper_size_label,
-            options = PaperSize.entries,
-            selected = uiState.paperSize,
-            optionLabel = { it.label() },
-            onSelect = onPaperSizeChange,
-            enabled = uiState.isLoaded,
-        )
-        OptionSelect(
-            label = R.string.paper_type_label,
-            options = PaperType.entries,
-            selected = uiState.paperType,
-            optionLabel = { it.label() },
-            onSelect = onPaperTypeChange,
-            enabled = uiState.isLoaded,
-        )
-        val heightRange = labelHeightRange(uiState.paperType)
-        ValidatedTextField(
-            label = stringResource(R.string.label_height_label),
-            error = stringResource(R.string.invalid_label_height, heightRange.first, heightRange.last),
-            state = uiState.labelHeight,
-            onChanged = onLabelHeightChange,
-            enabled = uiState.isLoaded,
-            keyboardType = KeyboardType.Number,
-            suffix = stringResource(R.string.millimetres),
-        )
+    Column(modifier = modifier) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(20.dp)
+        ) {
+            ValidatedTextField(
+                label = stringResource(R.string.base_url_label),
+                error = stringResource(R.string.invalid_base_url),
+                state = uiState.baseUrl,
+                onChanged = onBaseUrlChange,
+                enabled = uiState.isLoaded,
+                placeholder = "https://erp.example.com",
+                keyboardType = KeyboardType.Uri,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            ValidatedTextField(
+                label = stringResource(R.string.api_key_label),
+                error = stringResource(R.string.invalid_api_key),
+                state = uiState.apiKey,
+                onChanged = onApiKeyChange,
+                enabled = uiState.isLoaded,
+                placeholder = "api_key:api_secret",
+                keyboardType = KeyboardType.Password,
+                modifier = Modifier.fillMaxWidth(),
+                visualTransformation = PasswordVisualTransformation(),
+            )
+            OptionSelect(
+                label = R.string.paper_size_label,
+                options = PaperSize.entries,
+                selected = uiState.paperSize,
+                optionLabel = { it.label() },
+                onSelect = onPaperSizeChange,
+                enabled = uiState.isLoaded,
+            )
+            OptionSelect(
+                label = R.string.paper_type_label,
+                options = PaperType.entries,
+                selected = uiState.paperType,
+                optionLabel = { it.label() },
+                onSelect = onPaperTypeChange,
+                enabled = uiState.isLoaded,
+            )
+            val heightRange = labelHeightRange(uiState.paperType)
+            ValidatedTextField(
+                label = stringResource(R.string.label_height_label),
+                error = stringResource(R.string.invalid_label_height, heightRange.first, heightRange.last),
+                state = uiState.labelHeight,
+                onChanged = onLabelHeightChange,
+                enabled = uiState.isLoaded,
+                keyboardType = KeyboardType.Number,
+                modifier = Modifier.fillMaxWidth(),
+                suffix = stringResource(R.string.millimetres),
+            )
+        }
         SubmitButton(
             label = stringResource(R.string.save_label),
             onClick = onSave,

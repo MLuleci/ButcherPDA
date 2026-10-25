@@ -28,10 +28,10 @@ import bg.butcher.pda.model.ExpiryStatus
 import bg.butcher.pda.model.StockEntryRow
 import bg.butcher.pda.model.expiryStatus
 import bg.butcher.pda.network.ErpError
-import bg.butcher.pda.network.NetworkState
 import bg.butcher.pda.ui.components.Centered
 import bg.butcher.pda.ui.components.ErrorMessage
 import bg.butcher.pda.ui.components.LabelledValue
+import bg.butcher.pda.ui.state.NetworkState
 import bg.butcher.pda.ui.theme.PreviewTheme
 import bg.butcher.pda.ui.theme.ThemePreviews
 import bg.butcher.pda.ui.theme.statusColors

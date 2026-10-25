@@ -57,7 +57,6 @@
     <string name="bom_line">BOM: %1$s</string>
     <string name="quantity_with_unit">%1$s %2$s</string>
     <string name="clear_label">Clear</string>
-    <string name="valid_label">Valid</string>
     <string name="batch_not_in_recipe">Batch %1$s is %2$s, which is not in this recipe.</string>
     <string name="batch_already_added">This batch has already been added.</string>
     <string name="not_a_batch_label">This code is not a batch label.</string>
@@ -119,6 +118,8 @@
     <string name="paper_type_continuous">Continuous roll</string>
     <string name="label_height_label">Label height</string>
     <string name="invalid_label_height">Enter a whole number from %1$d to %2$d.</string>
+    <string name="settings_saved">Settings saved</string>
+    <string name="settings_save_failed">Couldn\'t save the settings. Try again.</string>
     <string name="millimetres">mm</string>
     <string name="label_caption_produced">P</string>
     <string name="label_caption_expires">E</string>

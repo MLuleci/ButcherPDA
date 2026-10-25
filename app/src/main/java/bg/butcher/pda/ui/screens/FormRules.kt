@@ -3,7 +3,7 @@ package bg.butcher.pda.ui.screens
 import bg.butcher.pda.model.BomDetails
 import bg.butcher.pda.model.BomDetailsItem
 import bg.butcher.pda.model.DEFAULT_TOLERANCE_PERCENT
-import bg.butcher.pda.network.NetworkState
+import bg.butcher.pda.ui.state.NetworkState
 import bg.butcher.pda.util.roundForErp
 import bg.butcher.pda.util.validateQuantity
 import kotlin.math.ceil

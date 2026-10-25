@@ -23,7 +23,6 @@ import bg.butcher.pda.R
 import bg.butcher.pda.model.BomDetails
 import bg.butcher.pda.model.BomDetailsItem
 import bg.butcher.pda.network.ErpError
-import bg.butcher.pda.network.NetworkState
 import bg.butcher.pda.ui.components.BatchDialog
 import bg.butcher.pda.ui.components.BatchDialogState
 import bg.butcher.pda.ui.components.BatchInput
@@ -33,6 +32,7 @@ import bg.butcher.pda.ui.components.IngredientLine
 import bg.butcher.pda.ui.components.IngredientTable
 import bg.butcher.pda.ui.components.SubmitButton
 import bg.butcher.pda.ui.components.errorText
+import bg.butcher.pda.ui.state.NetworkState
 import bg.butcher.pda.ui.theme.PreviewTheme
 import bg.butcher.pda.ui.theme.ThemePreviews
 import bg.butcher.pda.util.formatDecimal

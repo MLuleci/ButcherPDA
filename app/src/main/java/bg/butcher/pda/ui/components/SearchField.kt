@@ -1,6 +1,5 @@
 package bg.butcher.pda.ui.components
 
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldLineLimits
@@ -58,7 +57,6 @@ fun SearchField(
         },
         modifier = modifier
             .fillMaxWidth()
-            .focusable()
             .focusRequester(focusRequester)
     )
     LaunchedEffect(requestFocus) {

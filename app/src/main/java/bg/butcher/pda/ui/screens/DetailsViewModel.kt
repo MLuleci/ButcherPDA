@@ -21,9 +21,9 @@ import bg.butcher.pda.hardware.toLabel
 import bg.butcher.pda.model.BatchDetails
 import bg.butcher.pda.model.StockEntryRow
 import bg.butcher.pda.network.ErpError
-import bg.butcher.pda.network.JobSlot
-import bg.butcher.pda.network.NetworkState
 import bg.butcher.pda.ui.Details
+import bg.butcher.pda.ui.state.JobSlot
+import bg.butcher.pda.ui.state.NetworkState
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow

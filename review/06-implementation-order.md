@@ -485,6 +485,12 @@ The design is in 2.14 (summary). Search and Details only need Phase 1 (the netwo
 - **Ingredient table:** the swipes are gone. Each batch row has 48 dp Edit and Delete buttons, with the quantity and unit under the batch number. The column header is gone too, since the rows explain themselves, and `amount_label` with it. There's still no delete confirmation.
 - **Previews:** `@ThemePreviews` shows each preview in the light and dark theme, and `PreviewTheme` uses the app's own colours (the PDA's Android 6 has no dynamic colour) on a surface. All previews are `private`. New ones: `IngredientTable` (every coverage colour, and a whole-number ingredient), `ErrorMessage`, `SearchField`, `ConfirmCancelButtons`, `CheckboxRow`, `LabelledValue` and `SettingsScreen`. `SettingsScreen` now takes its state and callbacks, and its route holds the ViewModel, like the other screens. `BatchDialog` and `BatchFilterSheet` have none: they're in their own windows, which previews don't show well.
 - **Status colours:** `theme/StatusColors.kt` has `warning` (amber) and `success` (green) `ColorFamily`s for light and dark, provided by `AppTheme` and read as `statusColors`. They stay the same with dynamic colour, so their meaning doesn't change with the wallpaper. The ingredient table's UNDER and OK use them (same colours as before), and the Details banner for "expires soon" uses the warning container instead of the tertiary one.
+- **Tidy-ups:** most of 01, 02 and 03's were already done in earlier phases. This round:
+  - **Retrofit:** the official `converter-kotlinx-serialization` replaces Jake Wharton's archived one.
+  - **Packages:** `NetworkState` and `JobSlot` move from `network` to `ui.state`, and `JobSlot` loses its unused `launchIfIdle` and `join`.
+  - **Settings:** laid out like Start (20 dp padding, 10 dp spacing, Save at the bottom outside the scroll), with `modifier` parameters on its fields and a toast after saving, or if saving fails.
+  - **Small fixes:** `MainApplication.container` has a private setter; `HomeScreen` and `ErrorMessage` take `modifier` as their first optional parameter; `SearchField` drops a redundant `.focusable()`; an unused import and the unused `valid_label` string are gone; Gradle gets 4 GB.
+  - **Left as is:** the theme files (Compose and XML), and with them the `material` and `appcompat` libraries the XML theme needs. `printState` keeps `Throwable`, since a printer failure isn't an `ErpError`. The `"name (unit)"` and `" · "` joins have no words to translate.
 
 ---
 

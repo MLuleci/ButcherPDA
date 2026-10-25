@@ -58,7 +58,6 @@
     <string name="bom_line">СНМ: %1$s</string>
     <string name="quantity_with_unit">%1$s %2$s</string>
     <string name="clear_label">Изчистване</string>
-    <string name="valid_label">Валидно</string>
     <string name="batch_not_in_recipe">Партида %1$s е %2$s, което не е в тази рецепта.</string>
     <string name="batch_already_added">Тази партида вече е добавена.</string>
     <string name="not_a_batch_label">Този код не е етикет на партида.</string>
@@ -120,6 +119,8 @@
     <string name="paper_type_continuous">Непрекъсната ролка</string>
     <string name="label_height_label">Височина на етикета</string>
     <string name="invalid_label_height">Въведете цяло число от %1$d до %2$d.</string>
+    <string name="settings_saved">Настройките са запазени</string>
+    <string name="settings_save_failed">Настройките не бяха запазени. Опитайте отново.</string>
     <string name="millimetres">мм</string>
     <string name="label_caption_produced">П</string>
     <string name="label_caption_expires">Г</string>

@@ -1,4 +1,4 @@
-package bg.butcher.pda.network
+package bg.butcher.pda.ui.state
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -18,15 +18,6 @@ class JobSlot(private val scope: CoroutineScope) {
             delay(debounce)
             block()
         }
-    }
-
-    fun launchIfIdle(block: suspend CoroutineScope.() -> Unit) {
-        if (isActive) return
-        job = scope.launch(block = block)
-    }
-
-    suspend fun join() {
-        job?.join()
     }
 
     fun cancel() {

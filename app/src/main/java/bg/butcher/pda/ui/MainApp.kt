@@ -42,7 +42,6 @@ import bg.butcher.pda.MainApplication
 import bg.butcher.pda.R
 import bg.butcher.pda.hardware.ScannedCode
 import bg.butcher.pda.hardware.parseScan
-import bg.butcher.pda.network.NetworkState
 import bg.butcher.pda.ui.components.BatchDialogState
 import bg.butcher.pda.ui.components.BatchDialogStateSaver
 import bg.butcher.pda.ui.components.BatchInput
@@ -58,10 +57,12 @@ import bg.butcher.pda.ui.screens.SearchScreen
 import bg.butcher.pda.ui.screens.SearchUiEffect
 import bg.butcher.pda.ui.screens.SearchViewModel
 import bg.butcher.pda.ui.screens.SettingsScreen
+import bg.butcher.pda.ui.screens.SettingsUiEffect
 import bg.butcher.pda.ui.screens.SettingsViewModel
 import bg.butcher.pda.ui.screens.StartScreen
 import bg.butcher.pda.ui.screens.SummaryScreen
 import bg.butcher.pda.ui.screens.canFetch
+import bg.butcher.pda.ui.state.NetworkState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -128,6 +129,16 @@ fun MainApp(
             composable<Settings> {
                 val viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory)
                 val state by viewModel.uiState.collectAsState()
+                val context = LocalContext.current
+                LaunchedEffect(viewModel) {
+                    viewModel.effects.collect { effect ->
+                        val message = when (effect) {
+                            SettingsUiEffect.SAVED -> R.string.settings_saved
+                            SettingsUiEffect.SAVE_FAILED -> R.string.settings_save_failed
+                        }
+                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                    }
+                }
                 SettingsScreen(
                     uiState = state,
                     onBaseUrlChange = viewModel::setBaseUrl,

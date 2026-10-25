@@ -45,8 +45,8 @@ val buttons = listOf(
 
 @Composable
 fun HomeScreen(
+    onButtonClicked: (route: Any) -> Unit,
     modifier: Modifier = Modifier,
-    onButtonClicked: (route: Any) -> Unit = {},
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -82,6 +82,6 @@ fun HomeScreen(
 @Composable
 private fun HomeScreenPreview() {
     PreviewTheme {
-        HomeScreen()
+        HomeScreen(onButtonClicked = {})
     }
 }

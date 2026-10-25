@@ -17,15 +17,14 @@ import bg.butcher.pda.hardware.parseScan
 import bg.butcher.pda.model.BatchDetails
 import bg.butcher.pda.model.BatchFilters
 import bg.butcher.pda.network.ErpError
-import bg.butcher.pda.network.JobSlot
-import bg.butcher.pda.network.NetworkState
+import bg.butcher.pda.ui.state.JobSlot
+import bg.butcher.pda.ui.state.NetworkState
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.updateAndGet
-import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds

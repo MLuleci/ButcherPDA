@@ -9,7 +9,7 @@ import bg.butcher.pda.hardware.LabelPrinter
 import bg.butcher.pda.model.BomSearchResultItem
 import bg.butcher.pda.model.ManufactureEntry
 import bg.butcher.pda.network.ErpError
-import bg.butcher.pda.network.NetworkState
+import bg.butcher.pda.ui.state.NetworkState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch

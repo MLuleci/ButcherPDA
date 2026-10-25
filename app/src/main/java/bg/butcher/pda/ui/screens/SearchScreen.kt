@@ -36,7 +36,6 @@ import bg.butcher.pda.R
 import bg.butcher.pda.model.BatchDetails
 import bg.butcher.pda.model.BatchFilters
 import bg.butcher.pda.network.ErpError
-import bg.butcher.pda.network.NetworkState
 import bg.butcher.pda.ui.components.BatchFilterSheet
 import bg.butcher.pda.ui.components.BatchResultRow
 import bg.butcher.pda.ui.components.Centered
@@ -44,6 +43,7 @@ import bg.butcher.pda.ui.components.ErrorMessage
 import bg.butcher.pda.ui.components.SearchField
 import bg.butcher.pda.ui.components.errorText
 import bg.butcher.pda.ui.components.orderLabel
+import bg.butcher.pda.ui.state.NetworkState
 import bg.butcher.pda.ui.theme.PreviewTheme
 import bg.butcher.pda.ui.theme.ThemePreviews
 import bg.butcher.pda.util.today

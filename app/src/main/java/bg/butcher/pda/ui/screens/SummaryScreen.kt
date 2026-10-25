@@ -18,9 +18,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import bg.butcher.pda.R
 import bg.butcher.pda.model.ManufactureEntry
-import bg.butcher.pda.network.NetworkState
 import bg.butcher.pda.ui.components.LabelledValue
 import bg.butcher.pda.ui.components.SubmitButton
+import bg.butcher.pda.ui.state.NetworkState
 import bg.butcher.pda.ui.theme.PreviewTheme
 import bg.butcher.pda.ui.theme.ThemePreviews
 import bg.butcher.pda.util.formatDate

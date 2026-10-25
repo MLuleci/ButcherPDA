@@ -37,9 +37,9 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import bg.butcher.pda.R
 import bg.butcher.pda.model.BomDetailsItem
-import bg.butcher.pda.network.NetworkState
 import bg.butcher.pda.ui.screens.BatchLookupError
 import bg.butcher.pda.ui.screens.BatchMatch
+import bg.butcher.pda.ui.state.NetworkState
 import bg.butcher.pda.util.formatDecimal
 import bg.butcher.pda.util.parseDecimal
 import bg.butcher.pda.util.validateQuantity

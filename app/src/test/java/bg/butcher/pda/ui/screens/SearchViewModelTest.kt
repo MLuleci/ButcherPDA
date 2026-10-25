@@ -6,7 +6,7 @@ import bg.butcher.pda.data.ErpRepository
 import bg.butcher.pda.data.FakeErpRepository
 import bg.butcher.pda.model.BatchDetails
 import bg.butcher.pda.model.BatchFilters
-import bg.butcher.pda.network.NetworkState
+import bg.butcher.pda.ui.state.NetworkState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch

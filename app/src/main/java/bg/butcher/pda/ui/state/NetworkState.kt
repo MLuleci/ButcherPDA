@@ -1,4 +1,4 @@
-package bg.butcher.pda.network
+package bg.butcher.pda.ui.state
 
 sealed interface NetworkState<out T, out E> {
     data object Idle : NetworkState<Nothing, Nothing>

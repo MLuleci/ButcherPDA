@@ -22,8 +22,8 @@ import java.io.IOException
 
 @Composable
 fun ErrorMessage(
+    error: ErpError?,
     modifier: Modifier = Modifier,
-    error: ErpError? = null,
     onRetry: (() -> Unit)? = null,
 ) {
     Column(

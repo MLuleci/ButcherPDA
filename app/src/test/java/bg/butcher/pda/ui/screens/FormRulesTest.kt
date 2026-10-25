@@ -3,7 +3,7 @@ package bg.butcher.pda.ui.screens
 import bg.butcher.pda.model.BomDetails
 import bg.butcher.pda.model.BomDetailsItem
 import bg.butcher.pda.model.BomSearchResultItem
-import bg.butcher.pda.network.NetworkState
+import bg.butcher.pda.ui.state.NetworkState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

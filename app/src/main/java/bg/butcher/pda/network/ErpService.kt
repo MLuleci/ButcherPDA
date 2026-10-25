@@ -8,10 +8,10 @@ import bg.butcher.pda.model.ManufactureEntry
 import bg.butcher.pda.model.ManufactureEntryRequest
 import bg.butcher.pda.model.MessageWrapper
 import bg.butcher.pda.model.StockEntryDetails
-import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
+import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import retrofit2.http.Body
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded

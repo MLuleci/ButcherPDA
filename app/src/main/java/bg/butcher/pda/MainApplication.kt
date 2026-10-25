@@ -12,6 +12,7 @@ import kotlinx.coroutines.launch
 
 class MainApplication: Application() {
     lateinit var container: AppContainer
+        private set
 
     // As long as the process
     private val scope = MainScope()

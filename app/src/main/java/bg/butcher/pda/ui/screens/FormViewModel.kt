@@ -21,8 +21,8 @@ import bg.butcher.pda.model.BomDetailsItem
 import bg.butcher.pda.model.BomSearchResultItem
 import bg.butcher.pda.model.ManufactureEntry
 import bg.butcher.pda.network.ErpError
-import bg.butcher.pda.network.JobSlot
-import bg.butcher.pda.network.NetworkState
+import bg.butcher.pda.ui.state.JobSlot
+import bg.butcher.pda.ui.state.NetworkState
 import bg.butcher.pda.util.dateFromToday
 import bg.butcher.pda.util.parseDecimal
 import kotlinx.coroutines.channels.Channel

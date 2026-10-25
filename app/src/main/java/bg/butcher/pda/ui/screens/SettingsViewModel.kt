@@ -16,10 +16,12 @@ import bg.butcher.pda.data.SettingsRepository
 import bg.butcher.pda.data.normaliseApiKey
 import bg.butcher.pda.data.normaliseBaseUrl
 import bg.butcher.pda.data.normaliseLabelHeight
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -44,6 +46,9 @@ data class SettingsUiState(
         get() = isLoaded && isDirty && baseUrl.isValid && apiKey.isValid && labelHeight.isValid
 }
 
+/** Told once, as a toast. */
+enum class SettingsUiEffect { SAVED, SAVE_FAILED }
+
 private fun baseUrlState(url: String) = SettingState(url, normaliseBaseUrl(url) != null)
 
 private fun apiKeyState(key: String) = SettingState(key, normaliseApiKey(key) != null)
@@ -54,6 +59,9 @@ private fun labelHeightState(mm: String, paperType: PaperType) =
 class SettingsViewModel(private val settingsRepository: SettingsRepository): ViewModel() {
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
+
+    private val _effects = Channel<SettingsUiEffect>(Channel.BUFFERED)
+    val effects = _effects.receiveAsFlow()
 
     init {
         viewModelScope.launch {
@@ -112,9 +120,11 @@ class SettingsViewModel(private val settingsRepository: SettingsRepository): Vie
                 _uiState.update {
                     if (it.isDirty) it else it.copy(baseUrl = baseUrlState(baseUrl.toString()), apiKey = apiKeyState(apiKey))
                 }
+                _effects.send(SettingsUiEffect.SAVED)
             } catch (e: IOException) {
                 Log.e(TAG, "save", e)
                 _uiState.update { it.copy(isDirty = true) }
+                _effects.send(SettingsUiEffect.SAVE_FAILED)
             }
         }
     }
