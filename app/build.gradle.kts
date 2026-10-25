@@ -62,10 +62,11 @@ android {
         release {
             buildConfigField("boolean", "USE_FAKE_ERP", "false")
             signingConfig = signingConfigs.findByName("release")
-            // R8 shrinking and resource shrinking; keep rules are in src/main/keepRules
-            optimization {
-                enable = true
-            }
+            // R8 and resource shrinking; keep rules are in src/main/keepRules. The newer optimization { } block
+            // needs an experimental flag before AGP 9.3, so this is the stable form
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
         }
     }
     buildFeatures {
