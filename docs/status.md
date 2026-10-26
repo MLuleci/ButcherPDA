@@ -8,6 +8,7 @@ As of commit `d842999` (October 2026): all the planned phases (0–7) are implem
 - **Backgrounding** the app on any screen doesn't crash.
 - **Printing on a continuous roll:** text and QR code, with label mode off, so there's no long feed.
 - **Scan results** arrive on `com.qs.scancode`, the trigger on `ismart.intent.scandown`, and `mComFd` is 23.
+- **"Unknown sources"** can be switched on in the PDA's settings, and is on for the test device.
 
 ## Built but not yet confirmed on the device
 
@@ -24,7 +25,7 @@ As of commit `d842999` (October 2026): all the planned phases (0–7) are implem
   - with no releases, it says it's up to date;
   - a newer release downloads and opens the installer;
   - a file signed with a different key is refused.
-- **Unknown sources:** whether the PDA firmware allows installing from them. If it doesn't, updates have to go through `adb`.
+- **The Android 6 install path:** the `file://` URI in the external files folder. The first attempt with a `content://` URI found no installer, even with "Unknown sources" on.
 - **The emulator** with `useFakeErp=true`: pick a BOM, see the expiry filled in, see the ingredient table.
 
 ## Known gaps and deferred work

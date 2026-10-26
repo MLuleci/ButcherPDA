@@ -19,7 +19,6 @@ import kotlinx.coroutines.flow.first
 import okhttp3.OkHttpClient
 import okhttp3.tls.HandshakeCertificates
 import okhttp3.tls.decodeCertificatePem
-import java.io.File
 import java.security.cert.X509Certificate
 import kotlin.time.Duration.Companion.seconds
 
@@ -88,7 +87,7 @@ class DefaultAppContainer(context: Context): AppContainer {
         val client = OkHttpClient.Builder()
             .sslSocketFactory(certificates.sslSocketFactory(), certificates.trustManager)
             .build()
-        UpdateRepository(client, File(context.cacheDir, "updates"), BuildConfig.VERSION_CODE)
+        UpdateRepository(client, updateDirectory(context), BuildConfig.VERSION_CODE)
     }
 
     override val updateInstaller by lazy { UpdateInstaller(context.applicationContext) }

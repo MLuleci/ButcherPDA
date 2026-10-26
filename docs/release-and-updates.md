@@ -40,7 +40,7 @@ Release builds use `isMinifyEnabled = true`, `isShrinkResources = true` and `pro
   - It sends `GET https://api.github.com/repos/MLuleci/ButcherPDA/releases/latest` with `Accept: application/vnd.github+json`, and no token, since the repo is public.
   - `GithubRelease.newerThan(installed)` picks the highest-code asset matching `ButcherPDA-(\d+)-([0-9a-f]+)\.apk` that's above `BuildConfig.VERSION_CODE`.
   - A 404, meaning nothing released yet, counts as up to date. Other errors and bad bodies throw `UpdateException`.
-- **Downloading:** the APK is streamed to `cacheDir/updates/ButcherPDA-<code>.apk.part`, with progress shown, and renamed to `ButcherPDA-<code>.apk` once its size matches the asset's `size`. So a file under the final name is always a finished download, and one cut off (e.g. by the app being killed) is never mistaken for one. A short file is deleted and refused. Leaving Settings cancels the download.
+- **Downloading:** the APK is streamed to `updates/ButcherPDA-<code>.apk.part` in `updateDirectory(context)`, which is `getExternalFilesDir(null)` on Android 6 (falling back to `cacheDir` if external storage isn't mounted) and `cacheDir` from Android 7, with progress shown, and renamed to `ButcherPDA-<code>.apk` once its size matches the asset's `size`. So a file under the final name is always a finished download, and one cut off (e.g. by the app being killed) is never mistaken for one. A short file is deleted and refused. Leaving Settings cancels the download.
 - **Reusing a download:** if `ButcherPDA-<code>.apk` is already there at the right size, it's used without a request, e.g. after the installer was cancelled and Settings left. Other files in the folder (older versions, `.part` files) are deleted first. The check below still runs, so a damaged file that happens to be the right size is caught and deleted, and the next attempt downloads it again.
 - **Checking the file** (`data/UpdateInstaller.check`, using the API 23 calls `getPackageArchiveInfo(path, GET_SIGNATURES)` and `getPackageInfo`):
   - It must be this package, at the expected `versionCode`, signed with the installed app's key.
@@ -48,7 +48,9 @@ Release builds use `isMinifyEnabled = true`, `isShrinkResources = true` and `pro
   - A package-manager exception counts as an unreadable file.
   - A refused file is deleted, and a clear error is shown.
 - **Installing:**
-  - The app opens `ACTION_INSTALL_PACKAGE` with a `FileProvider` URI. The authority is `${applicationId}.updates`, with paths in `res/xml/update_paths.xml`, `cache-path updates/`.
+  - The app opens `ACTION_INSTALL_PACKAGE`. On Android 6 it passes a `file://` URI: that installer (AOSP `PackageInstallerActivity`, marshmallow) only accepts `file:` and `package:` schemes, and opens the path itself as a separate app, so the APK must be outside the app's private storage. A `content://` URI matched no installer there, which showed as "this device can't install apps from outside its store". From Android 7 a `file://` URI throws `FileUriExposedException`, so it passes a `FileProvider` URI (authority `${applicationId}.updates`, paths in `res/xml/update_paths.xml`).
+  - `ACTION_INSTALL_PACKAGE` is deprecated from Android 10 in favour of `PackageInstaller` sessions. It still works there, and is the way on Android 6.
+  - The IDE flags `REQUEST_INSTALL_PACKAGES` under Google Play's policy, which forbids self-updating apps. It doesn't apply: the app isn't distributed through Play, and updates only start from the Settings button. The manifest comment says so.
   - On Android 6 the installer asks to allow "Unknown sources" itself if it's off. `REQUEST_INSTALL_PACKAGES` in the manifest covers Android 8+.
   - A firmware without an installer gets a toast instead of a crash.
   - If the operator cancels the installer, "Download and install" reopens it without downloading again (`UpdateState.Ready`).

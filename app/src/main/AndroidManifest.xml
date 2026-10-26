@@ -3,7 +3,9 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Self-update; Android 8+ asks per app, Android 6 uses the device's "Unknown sources" setting -->
+    <!-- Self-update; Android 8+ asks per app, Android 6 uses the device's "Unknown sources" setting. The IDE flags it
+         under Google Play's policy, which forbids self-updates; the app is installed from GitHub releases, not Play,
+         and updates only start from a button the user presses -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <application
         android:name=".MainApplication"

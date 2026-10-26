@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
-    <!-- UpdateRepository downloads into cacheDir/updates -->
+    <!-- UpdateRepository downloads into updates/ here (Android 7+), or in the external files folder on Android 6 -->
     <cache-path name="updates" path="updates/" />
+    <external-files-path name="updates_external" path="updates/" />
 </paths>
