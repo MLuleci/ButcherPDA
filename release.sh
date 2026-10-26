@@ -13,4 +13,4 @@ VERSION_NAME=$(git rev-parse --short HEAD)
 RELEASE="ButcherPDA-$VERSION_CODE-$VERSION_NAME.apk"
 [ -f "$RELEASE" ] && rm "$RELEASE"
 
-cp "$APK" "./$RELEASE"
+cp "$APK" "$RELEASE"
