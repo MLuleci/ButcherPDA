@@ -10,7 +10,7 @@ apksigner verify --print-certs "$APK" | grep -q "$CERT_SHA256" || exit 1
 
 VERSION_CODE=$(git rev-list --count HEAD)
 VERSION_NAME=$(git rev-parse --short HEAD)
-RELEASE="Butcher-$VERSION_CODE-$VERSION_NAME.apk"
+RELEASE="ButcherPDA-$VERSION_CODE-$VERSION_NAME.apk"
 [ -f "$RELEASE" ] && rm "$RELEASE"
 
 cp "$APK" "./$RELEASE"
