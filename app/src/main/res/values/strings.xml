@@ -87,6 +87,10 @@
     <string name="order_a_to_z">A → Z</string>
     <string name="order_z_to_a">Z → A</string>
     <string name="produced_within_label">Produced in the last</string>
+    <string name="kind_label">Show</string>
+    <string name="kind_manufactured">Made here</string>
+    <string name="kind_raw">Raw materials</string>
+    <string name="kind_all">All batches</string>
     <string name="hide_expired_label">Hide expired batches</string>
     <string name="reset_label">Reset</string>
     <string name="summary_last_days">Last %1$d days</string>
@@ -103,7 +107,7 @@
     <string name="expires_tomorrow">Expires tomorrow</string>
     <string name="no_expiry_date">No expiry date</string>
     <string name="ingredients_used_label">Ingredients used</string>
-    <string name="not_produced_here">This item isn\'t produced here.</string>
+    <string name="not_produced_here">Bought in, not produced here.</string>
     <string name="not_made_with_app">This batch wasn\'t made with this app, so its ingredients aren\'t known.</string>
     <string name="no_ingredients">No ingredient batches recorded.</string>
     <plurals name="expires_in_days_banner">

@@ -19,6 +19,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -174,15 +175,20 @@ class DetailsViewModelTest {
     }
 
     @Test
-    fun printLabel_ignoresBatchesNotMadeHere() = runTest(dispatcher) {
+    fun printLabel_printsBoughtInBatchesToo() = runTest(dispatcher) {
         val printed = mutableListOf<LabelData>()
-        val vm = DetailsViewModel("BEEF.0001", FakeErpRepository()) { printed += it; Result.success(Unit) }
+        val vm = DetailsViewModel("BEEF.0003", FakeErpRepository()) { printed += it; Result.success(Unit) }
         advanceUntilIdle()
 
         vm.printLabel()
         advanceUntilIdle()
 
-        assertTrue(printed.isEmpty())
+        // A raw batch with no production date still prints, with its batch number for the QR code
+        val label = printed.single()
+        assertEquals("BEEF.0003", label.batchNumber)
+        assertEquals("Beef", label.itemName)
+        assertNull(label.productionDate)
+        assertTrue(vm.uiState.value.printState is NetworkState.Success)
     }
 }
 

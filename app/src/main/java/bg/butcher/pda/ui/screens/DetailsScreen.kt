@@ -140,8 +140,9 @@ fun DetailsScreen(
                         Text(batch.itemName, style = MaterialTheme.typography.titleLarge)
                         Text(batch.name, style = MaterialTheme.typography.bodyLarge)
                     }
+                    // A note, not a warning: bought-in batches are expected here
                     if (!batch.isMadeHere) {
-                        Text(stringResource(R.string.not_produced_here), color = MaterialTheme.colorScheme.error)
+                        Text(stringResource(R.string.not_produced_here), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     ExpiryBanner(batch.expiryDate, today)
                     LabelledValue(
@@ -157,18 +158,16 @@ fun DetailsScreen(
                     batch.referenceName?.let { LabelledValue(stringResource(R.string.stock_entry_label), it) }
                     IngredientList(state.ingredients, onRetryIngredients)
                 }
-                if (batch.isMadeHere) {
-                    OutlinedButton(
-                        onClick = onPrint,
-                        enabled = state.printState !is NetworkState.Loading,
-                        modifier = Modifier
-                            .align(Alignment.CenterHorizontally)
-                            .fillMaxWidth(.9f)
-                            .heightIn(min = 56.dp)
-                            .padding(bottom = 10.dp)
-                    ) {
-                        Text(stringResource(R.string.print_label))
-                    }
+                OutlinedButton(
+                    onClick = onPrint,
+                    enabled = state.printState !is NetworkState.Loading,
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .fillMaxWidth(.9f)
+                        .heightIn(min = 56.dp)
+                        .padding(bottom = 10.dp)
+                ) {
+                    Text(stringResource(R.string.print_label))
                 }
             }
         }

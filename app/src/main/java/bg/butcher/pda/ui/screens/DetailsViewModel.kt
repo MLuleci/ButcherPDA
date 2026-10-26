@@ -96,7 +96,8 @@ class DetailsViewModel(
     /** Prints the batch's current amount; a label can be printed again, e.g. for a torn one. */
     fun printLabel() {
         val state = _uiState.value
-        val batch = (state.batch as? NetworkState.Success)?.data?.takeIf { it.isMadeHere } ?: return
+        // Bought-in batches print too, so their labels can be scanned on Form
+        val batch = (state.batch as? NetworkState.Success)?.data ?: return
         if (state.printState is NetworkState.Loading) return
 
         _uiState.update { it.copy(printState = NetworkState.Loading) }

@@ -1,6 +1,7 @@
 package bg.butcher.pda.data
 
 import bg.butcher.pda.model.BatchFilters
+import bg.butcher.pda.model.BatchKind
 import bg.butcher.pda.model.BatchSort
 import bg.butcher.pda.network.ErpError
 import kotlinx.coroutines.test.runTest
@@ -88,6 +89,26 @@ class FakeErpRepositoryTest {
         assertTrue(results.isNotEmpty())
         assertTrue(results.all { it.defaultBom != null })
         assertTrue(repository.searchBatches("beef", noDayLimit).getOrThrow().none { it.item == "BEEF" })
+    }
+
+    @Test
+    fun searchBatches_listsRawMaterialsOrEverything() = runTest {
+        val raw = repository.searchBatches("beef", noDayLimit.withKind(BatchKind.RAW)).getOrThrow()
+        val all = repository.searchBatches("", noDayLimit.withKind(BatchKind.ALL)).getOrThrow()
+
+        assertEquals(listOf("BEEF.0001", "BEEF.0002", "BEEF.0003"), raw.map { it.name }.sorted())
+        assertTrue(raw.all { it.defaultBom == null })
+        assertTrue(all.any { it.defaultBom == null } && all.any { it.defaultBom != null })
+    }
+
+    @Test
+    fun searchBatches_aDayLimitLeavesOutRawBatchesWithoutADate() = runTest {
+        val raw = BatchFilters(producedWithinDaysText = "30", kind = BatchKind.RAW)
+
+        val names = repository.searchBatches("beef", raw).getOrThrow().map { it.name }
+
+        // BEEF.0003 has no production date, as when none is typed in on receipt
+        assertEquals(listOf("BEEF.0001", "BEEF.0002"), names.sorted())
     }
 
     @Test

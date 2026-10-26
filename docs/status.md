@@ -15,8 +15,9 @@ As of commit `d842999` (October 2026): all the planned phases (0–7) are implem
   - scanning a label opens its Details;
   - scanning another label on Details replaces it, and Back goes to Search;
   - the filters and sorts change the list;
-  - raw-material batches (e.g. `BEEF.0001`) are left out;
-  - a label printed from Details scans back to the same page.
+  - raw-material batches (e.g. `BEEF.0001`) are left out by default, and listed under "Raw materials";
+  - a label printed from Details scans back to the same page;
+  - a raw-material batch prints from Details, and its label is accepted in the Form flow's batch dialog.
 - **Roll labels** at the configured height, tearing cleanly in the blank end. Adjust `TEAR_OFF_ROWS` (a multiple of 24) if needed.
 - **The minified, signed release build** on the PDA (R8 with the SDK and the serialization models).
 - **Self-update:**
@@ -45,4 +46,4 @@ As of commit `d842999` (October 2026): all the planned phases (0–7) are implem
 - **Cyrillic sorting:** product names sort in Bulgarian order only if the database collation is Unicode. Not verified.
 - **Search edge cases:**
   - an item whose default BOM is removed drops out of Search, though it can still be found by a scan or an exact Enter;
-  - an item that's both made and bought shows its bought batches too.
+  - an item that's both made and bought shows its bought batches under "made here", since the kind is decided by the item, not the batch.

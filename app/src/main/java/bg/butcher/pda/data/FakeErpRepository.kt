@@ -2,6 +2,7 @@ package bg.butcher.pda.data
 
 import bg.butcher.pda.model.BatchDetails
 import bg.butcher.pda.model.BatchFilters
+import bg.butcher.pda.model.BatchKind
 import bg.butcher.pda.model.BatchSort
 import bg.butcher.pda.model.BomDetails
 import bg.butcher.pda.model.BomDetailsItem
@@ -82,13 +83,15 @@ class FakeErpRepository(
         RAW_MATERIALS.forEach { item ->
             for (i in 1..3) {
                 val produced = today.minus(i, DateTimeUnit.DAY)
+                // Bought in, like a supplier's batch on a Material Receipt: no default BOM, and the third has no
+                // production date, as when none is typed in on receipt
                 addBatch(
                     BatchDetails(
                         name = "${item.code}.${i.toString().padStart(4, '0')}",
                         item = item.code,
                         itemName = item.name,
                         stockUom = item.uom,
-                        manufacturingDate = produced,
+                        manufacturingDate = produced.takeIf { i < 3 },
                         expiryDate = produced.plus(item.shelfLife, DateTimeUnit.DAY),
                         batchQuantity = if (item.wholeNumber) 200.0 else 50.0 * i,
                         referenceDoctype = "Stock Entry",
@@ -211,7 +214,13 @@ class FakeErpRepository(
                 BatchSort.PRODUCT -> compareBy { it.itemName.lowercase() }
             }
             batches.values
-                .filter { it.defaultBom != null }
+                .filter {
+                    when (filters.kind) {
+                        BatchKind.MANUFACTURED -> it.defaultBom != null
+                        BatchKind.RAW -> it.defaultBom == null
+                        BatchKind.ALL -> true
+                    }
+                }
                 .filter { days == null || (it.manufacturingDate ?: return@filter false) >= today.minus(days, DateTimeUnit.DAY) }
                 .filter { !filters.hideExpired || (it.expiryDate ?: return@filter false) >= today }
                 .filter { text.isEmpty() || it.name.contains(text, ignoreCase = true) || it.itemName.contains(text, ignoreCase = true) }

@@ -77,7 +77,8 @@ BatchesGraph     { Search → Details(batch: String) }
   - **The ⚙ button** shows a dot when the filters aren't the defaults.
   - **Paging:** "Load more", 30 rows a page.
 - **Details** (`DetailsViewModel(batch, repo, printer)`; only its factory reads the route, so the ViewModel is testable without Android): it loads the batch, then its Stock Entry for "ingredients used". The ingredients have their own error state and Retry.
-  - **Not made here:** a batch whose item has no default BOM (`isMadeHere` false), or that has no Stock Entry link, shows "not produced here" and has no Print button.
+  - **Not made here:** a batch whose item has no default BOM (`isMadeHere` false) is bought in, e.g. a supplier's batch on a Material Receipt. It shows a neutral "bought in" note, and "not made with this app" instead of ingredients, with no Stock Entry request. It still has a Print button, so raw materials can be labelled and then scanned on Form.
+  - **Print** is available for every batch.
   - **A scan on Details** replaces the page (`popUpTo<Details> { inclusive = true }`), so Back always goes to Search.
 - **Filters reset on each visit from Home,** because the graph is popped when leaving.
 

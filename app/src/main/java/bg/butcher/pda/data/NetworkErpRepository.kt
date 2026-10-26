@@ -2,6 +2,7 @@ package bg.butcher.pda.data
 
 import bg.butcher.pda.model.BatchDetails
 import bg.butcher.pda.model.BatchFilters
+import bg.butcher.pda.model.BatchKind
 import bg.butcher.pda.model.BomDetails
 import bg.butcher.pda.model.BomSearchResultItem
 import bg.butcher.pda.model.ManufactureEntry
@@ -98,7 +99,11 @@ class NetworkErpRepository(
         apiCall {
             val date = today()
             val conditions = buildJsonArray {
-                filter("item.default_bom", "is", "set")
+                when (filters.kind) {
+                    BatchKind.MANUFACTURED -> filter("item.default_bom", "is", "set")
+                    BatchKind.RAW -> filter("item.default_bom", "is", "not set")
+                    BatchKind.ALL -> {}
+                }
                 filters.producedWithinDays?.let { days ->
                     filter("manufacturing_date", ">=", date.minus(days, DateTimeUnit.DAY).toString())
                 }

@@ -36,6 +36,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import bg.butcher.pda.R
 import bg.butcher.pda.model.BatchFilters
+import bg.butcher.pda.model.BatchKind
 import bg.butcher.pda.model.BatchSort
 import kotlinx.serialization.json.Json
 
@@ -49,6 +50,13 @@ private fun BatchSort.label(): Int = when (this) {
     BatchSort.PRODUCED -> R.string.sort_produced
     BatchSort.EXPIRES -> R.string.sort_expires
     BatchSort.PRODUCT -> R.string.sort_product
+}
+
+@StringRes
+fun BatchKind.label(): Int = when (this) {
+    BatchKind.MANUFACTURED -> R.string.kind_manufactured
+    BatchKind.RAW -> R.string.kind_raw
+    BatchKind.ALL -> R.string.kind_all
 }
 
 /** The labels follow the sort: "Newest / Oldest first", "Soonest / Latest first", "A → Z / Z → A". */
@@ -108,6 +116,24 @@ fun BatchFilterSheet(
                     ) {
                         Text(stringResource(draft.sort.orderLabel(descending)))
                     }
+                }
+            }
+
+            Text(stringResource(R.string.kind_label), style = MaterialTheme.typography.titleSmall)
+            BatchKind.entries.forEach { kind ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp)
+                        .selectable(
+                            selected = draft.kind == kind,
+                            role = Role.RadioButton,
+                            onClick = { draft = draft.withKind(kind) },
+                        )
+                ) {
+                    RadioButton(selected = draft.kind == kind, onClick = null)
+                    Text(stringResource(kind.label()), modifier = Modifier.padding(start = 12.dp))
                 }
             }
 

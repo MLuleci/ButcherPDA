@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import bg.butcher.pda.R
 import bg.butcher.pda.model.BatchDetails
 import bg.butcher.pda.model.BatchFilters
+import bg.butcher.pda.model.BatchKind
 import bg.butcher.pda.network.ErpError
 import bg.butcher.pda.ui.components.BatchFilterSheet
 import bg.butcher.pda.ui.components.BatchResultRow
@@ -42,6 +43,7 @@ import bg.butcher.pda.ui.components.Centered
 import bg.butcher.pda.ui.components.ErrorMessage
 import bg.butcher.pda.ui.components.SearchField
 import bg.butcher.pda.ui.components.errorText
+import bg.butcher.pda.ui.components.label
 import bg.butcher.pda.ui.components.orderLabel
 import bg.butcher.pda.ui.state.NetworkState
 import bg.butcher.pda.ui.theme.PreviewTheme
@@ -52,6 +54,8 @@ import java.io.IOException
 
 @Composable
 private fun filterSummary(filters: BatchFilters): String = listOfNotNull(
+    // Only when it isn't the usual, so the line stays short
+    stringResource(filters.kind.label()).takeIf { filters.kind != BatchKind.MANUFACTURED },
     filters.producedWithinDays?.let { stringResource(R.string.summary_last_days, it) }
         ?: stringResource(R.string.summary_any_date),
     stringResource(filters.sort.orderLabel(filters.descending)),

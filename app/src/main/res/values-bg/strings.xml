@@ -88,6 +88,10 @@
     <string name="order_a_to_z">А → Я</string>
     <string name="order_z_to_a">Я → А</string>
     <string name="produced_within_label">Произведени през последните</string>
+    <string name="kind_label">Показване</string>
+    <string name="kind_manufactured">Произведени тук</string>
+    <string name="kind_raw">Суровини</string>
+    <string name="kind_all">Всички партиди</string>
     <string name="hide_expired_label">Скриване на изтеклите партиди</string>
     <string name="reset_label">Нулиране</string>
     <string name="summary_last_days">Последните %1$d дни</string>
@@ -104,7 +108,7 @@
     <string name="expires_tomorrow">Изтича утре</string>
     <string name="no_expiry_date">Без срок на годност</string>
     <string name="ingredients_used_label">Използвани съставки</string>
-    <string name="not_produced_here">Този артикул не се произвежда тук.</string>
+    <string name="not_produced_here">Закупена, не е произведена тук.</string>
     <string name="not_made_with_app">Тази партида не е направена с това приложение, затова съставките ѝ не са известни.</string>
     <string name="no_ingredients">Няма записани партиди на съставки.</string>
     <plurals name="expires_in_days_banner">

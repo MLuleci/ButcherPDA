@@ -16,6 +16,18 @@ class BatchFiltersTest {
         assertTrue(filters.descending)
         assertEquals(30, filters.producedWithinDays)
         assertFalse(filters.hideExpired)
+        assertEquals(BatchKind.MANUFACTURED, filters.kind)
+    }
+
+    @Test
+    fun withKind_rawMaterialsClearsTheDayLimit() {
+        val raw = BatchFilters().withKind(BatchKind.RAW)
+
+        assertEquals(BatchKind.RAW, raw.kind)
+        assertNull(raw.producedWithinDays)
+        assertFalse(raw.isDefault)
+        // The other kinds keep it
+        assertEquals(30, BatchFilters().withKind(BatchKind.ALL).producedWithinDays)
     }
 
     @Test

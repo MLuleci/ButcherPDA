@@ -102,12 +102,14 @@ Every submit carries a `request_id` (a UUID in `FormUiState.requestId`). The ser
 ## Search filters (`model/BatchFilters.kt`)
 
 - **Defaults:**
+  - batches made here (`BatchKind.MANUFACTURED`);
   - sort by production date, newest first;
   - produced within 30 days (`DEFAULT_DAYS`);
   - "hide expired" off.
 - **Sorts:** picking one also picks its usual direction: production date newest first, expiry soonest first, product A→Z. The order labels follow the sort ("Newest / Oldest first" and so on).
+- **Show (`BatchKind`):** made here (the item has a default BOM), raw materials (it has none, i.e. bought in), or all. Picking raw materials also clears the day limit (`withKind`), because a bought-in batch often has no production date, and a date limit leaves those out. The summary line names the kind when it isn't the default.
 - **The day limit** is text, so the field can be empty, which means no limit. 0 means today only. A value that isn't a whole number keeps the previous one when the sheet closes.
-- **The request** always filters to items with a default BOM, i.e. made here. The day limit and "hide expired" add date filters, and the query text matches the batch number or the product name.
+- **The request** filters by kind: `item.default_bom is set` for made here, `is not set` for raw materials, and nothing for all. The day limit and "hide expired" add date filters, and the query text matches the batch number or the product name.
   - **Order:** `order_by` is `<sort field> <dir>, name desc`. It's built only from the `BatchSort` enum, because Frappe inserts it into the SQL as raw text.
   - **Paging:** 30 rows a page (`BATCH_PAGE_SIZE`). "Load more" shows while the last page was full.
   - **Changes:** any change of text or filters starts again at page one and cancels a "Load more" in flight.

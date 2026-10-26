@@ -1,6 +1,7 @@
 package bg.butcher.pda.data
 
 import bg.butcher.pda.model.BatchFilters
+import bg.butcher.pda.model.BatchKind
 import bg.butcher.pda.model.BatchSort
 import bg.butcher.pda.network.ErpError
 import bg.butcher.pda.network.createErpService
@@ -131,6 +132,18 @@ class NetworkErpRepositoryTest {
         assertNull(url.queryParameter("or_filters"))
         assertEquals("item_name asc, name desc", url.queryParameter("order_by"))
         assertEquals("0", url.queryParameter("limit_start"))
+    }
+
+    @Test
+    fun searchBatches_filtersByKindOfItem() = runTest {
+        repeat(2) { enqueue("""{"data":[]}""") }
+        val noLimit = BatchFilters(producedWithinDaysText = "")
+
+        repository.searchBatches("", noLimit.withKind(BatchKind.RAW))
+        repository.searchBatches("", noLimit.withKind(BatchKind.ALL))
+
+        assertEquals("""[["item.default_bom","is","not set"]]""", server.takeRequest().url.queryParameter("filters"))
+        assertEquals("[]", server.takeRequest().url.queryParameter("filters"))
     }
 
     @Test
