@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.util.Log
 import androidx.core.content.ContextCompat
 import com.qs.wiget.PrintUtils
 import kotlinx.coroutines.Job
@@ -33,6 +34,8 @@ interface BarcodeScanner {
     fun setActive(active: Boolean)
 }
 
+private const val TAG = "BarcodeScanner"
+
 // Sent by the vendor SDK for each scan, with the text in "data"
 private const val SCAN_ACTION = "com.qs.scancode"
 private const val SCAN_EXTRA = "data"
@@ -51,14 +54,25 @@ class BroadcastBarcodeScanner(private val context: Context) : BarcodeScanner {
         var noRead: Job? = null
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
-                noRead?.cancel()
                 when (intent.action) {
-                    TRIGGER_ACTION -> noRead = launch {
-                        delay(NO_READ_TIMEOUT)
-                        trySend(ScanEvent.NoRead)
+                    TRIGGER_ACTION -> {
+                        noRead?.cancel()
+                        noRead = launch {
+                            delay(NO_READ_TIMEOUT)
+                            trySend(ScanEvent.NoRead)
+                        }
                     }
-                    SCAN_ACTION -> intent.getStringExtra(SCAN_EXTRA)?.takeIf { it.isNotBlank() }
-                        ?.let { trySend(ScanEvent.Code(it)) }
+                    SCAN_ACTION -> {
+                        val text = intent.getStringExtra(SCAN_EXTRA)?.takeIf { it.isNotBlank() } ?: return
+                        // The SDK also sends printer replies it doesn't know as scans, e.g. at the end of a job or
+                        // when it can't find the gap, so only a code while a trigger press waits for one is a scan
+                        if (noRead?.isActive != true) {
+                            Log.w(TAG, "Not a scan, no trigger press: $text")
+                            return
+                        }
+                        noRead?.cancel()
+                        trySend(ScanEvent.Code(text))
+                    }
                 }
             }
         }
