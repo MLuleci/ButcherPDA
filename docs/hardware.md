@@ -96,7 +96,10 @@ The PDA's scanner and printer share one serial port, driven by the vendor SDK `a
 - **No base URL:** without a valid one in Settings, the label prints text only. That was the "missing QR" bug.
 
 **Print result:**
-- **Before printing:** if `mComFd <= 0` or `!isCanprint`, it fails with `PrinterNotReadyException` ("Printer not ready" toast).
+- **Before printing:** if `mComFd <= 0` (the port isn't open), it fails with `PrinterNotReadyException` ("Printer not ready" toast).
+- **`isCanprint` goes stale:** the SDK sets it only from what the printer happens to send, and never asks. `14 00 0C 0F` (paper out) sets it false; `14 00 00 0F`, or another reply without `11`, sets it true. Opening the lid reports paper out, but closing it (when the printer feeds to the end of the label) doesn't report ready, so the flag stays false, and the SDK silently drops every job while it is.
+  - **So the app no longer checks it,** and sets it to true just before each `printBitmap`, on the main thread. With no paper, the printer reports paper out again, and the `com.qs.getmassage` broadcast (`message = 1`) fails the print as before.
+  - **That was the "check paper" error** seen right after loading a roll, which re-seating the roll only sometimes cleared. The vendor demo doesn't check the flag, but the SDK's own 200 ms job does, so it fails silently there.
 - **After printing,** it waits up to 4 s for `com.qs.getmassage` (int extra `message`):
   - `1` means out of paper, and fails the print;
   - `0` means printed;
