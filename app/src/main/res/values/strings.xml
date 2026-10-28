@@ -124,6 +124,8 @@
     <string name="invalid_label_height">Enter a whole number from %1$d to %2$d.</string>
     <string name="settings_saved">Settings saved</string>
     <string name="settings_save_failed">Couldn\'t save the settings. Try again.</string>
+    <string name="calibration_print">Print test ruler</string>
+    <string name="calibration_sent">Test ruler sent to the printer.</string>
     <string name="app_version">Version %1$s</string>
     <string name="update_check">Check for updates</string>
     <string name="update_install">Download and install</string>
