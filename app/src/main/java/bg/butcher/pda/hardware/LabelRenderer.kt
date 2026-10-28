@@ -16,14 +16,18 @@ import com.google.zxing.qrcode.QRCodeWriter
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import kotlin.math.ceil
 
-// The printer's resolution: 384 dots across 48 mm of a 58 mm roll
+// The printer's resolution
 const val DOTS_PER_MM = 8
 
 private const val PADDING = 8
 private const val GAP = 10
 
-// About 6 mm: printing closer to the gap makes the printer feed an extra blank label
-private const val BOTTOM_MARGIN = 6 * DOTS_PER_MM
+// In label mode the picture starts about 2 mm down the label (measured with the test ruler; probably
+// setStarNum(30)), so it ends that much lower than drawn
+private const val LABEL_TOP_OFFSET = 2 * DOTS_PER_MM
+
+// The vendor asks for 5-7 mm of blank above the gap; less makes the printer feed an extra blank label, as 4 mm did
+private const val BOTTOM_MARGIN = 6 * DOTS_PER_MM + LABEL_TOP_OFFSET
 
 // On a plain roll: blank paper at the end of each label, inside its height. The tear bar is past the print head, so
 // the end of each print stays in the printer and starts the next piece; this keeps the tear in the blank part.
@@ -123,15 +127,19 @@ fun qrSize(width: Int, rows: LabelRows, datesWidth: Int, maxSize: Int = Int.MAX_
  * The QR code is as large as the label allows on the left. The quantity and both dates always print whole beside
  * it, at the largest size that fits; the product name, batch number and Stock Entry ID may be cut short.
  * Below the label's [rows], the bitmap is blank.
+ *
+ * The bitmap is always [HEAD_DOTS] wide, as the printer centres it under the head, and the label is drawn in
+ * [area], the part that lands on the paper ([printArea]). The rest stays blank.
  */
 fun renderLabel(
     label: LabelData,
     captions: LabelCaptions,
     qrContent: String?,
-    width: Int,
+    area: PrintArea,
     rows: LabelRows,
     maxQrSize: Int = Int.MAX_VALUE,
 ): Bitmap {
+    val width = area.width
     val contentHeight = rows.label - 2 * PADDING
     val wholeLines = listOfNotNull(
         label.quantity,
@@ -154,9 +162,11 @@ fun renderLabel(
         text = textBlock(label, wholeLines, textWidth, size)
     }
 
-    val bitmap = Bitmap.createBitmap(width, rows.bitmap, Bitmap.Config.ARGB_8888)
+    val bitmap = Bitmap.createBitmap(HEAD_DOTS, rows.bitmap, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
     canvas.drawColor(Color.WHITE)
+    // Everything below is drawn as if the paper started at the bitmap's left edge
+    canvas.translate(area.left.toFloat(), 0f)
     qrContent?.takeIf { qrSize > 0 }?.let {
         val top = PADDING + (contentHeight - qrSize) / 2
         canvas.drawBitmap(qrBitmap(it, qrSize), PADDING.toFloat(), top.toFloat(), null)

@@ -26,6 +26,7 @@ As of commit `d842999` (October 2026): all the planned phases (0–7) are implem
   - a newer release downloads and opens the installer;
   - a file signed with a different key is refused.
 - **The Android 6 install path:** the `file://` URI in the external files folder. The first attempt with a `content://` URI found no installer, even with "Unknown sources" on.
+- **58 mm die-cut labels with the measured print area:** the whole QR code on the label, the text not cut short, and no extra blank label after each print. Earlier tests clipped the QR code's left edge and fed a blank label each time.
 - **The emulator** with `useFakeErp=true`: pick a BOM, see the expiry filled in, see the ingredient table.
 
 ## Known gaps and deferred work

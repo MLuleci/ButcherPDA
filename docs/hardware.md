@@ -31,7 +31,7 @@ The PDA's scanner and printer share one serial port, driven by the vendor SDK `a
 
   The GPIO pins also depend on the model.
 - **Print width:** 384 px, or 570 px when `Build.MODEL` contains `408`. A wider bitmap is squashed to that width (`zoomImg` scales only the width), not scaled evenly.
-- **The device is a Qunsuo PDA-408.** Its model contains `408` (not `408P`), so the SDK uses `/dev/ttyMT3` and prints 570 px wide, which `PaperSize.MM_80` assumes. The exact `Build.MODEL` string is in the start-up log, and a different model in future could change both the port and the width.
+- **The device is a Qunsuo PDA-408.** Its model contains `408` (not `408P`), so the SDK uses `/dev/ttyMT3` and prints 570 px wide, which every label picture is sent at (`HEAD_DOTS`). The exact `Build.MODEL` string is in the start-up log, and a different model in future could change both the port and the width.
 - **Text encoding:** `printText` encodes in GBK for the printer's ROM font, which may have no Cyrillic. The app prints bitmaps instead.
 - **zxing:** the JAR bundles an unrelocated zxing 3.5.1, so don't add zxing as a dependency.
 - **Logging:** the SDK logs every serial chunk at `Log.e`.
@@ -74,21 +74,27 @@ The PDA's scanner and printer share one serial port, driven by the vendor SDK `a
 
 **Geometry:**
 - **Scale:** `DOTS_PER_MM = 8`.
-- **Paper sizes:** `PaperSize.MM_80` is 570 px wide with an uncapped QR code. `MM_58` is 384 px, with the QR code capped at 180 px so the text beside it stays readable.
+- **The head and the bay** (`hardware/PrintArea.kt`), measured with the test ruler on 80 mm and 58 mm rolls:
+  - **The head** prints 570 dots (71 mm), centred in the 80 mm bay, so 4.4 mm of an 80 mm roll stays blank on each side. Every picture is sent 570 dots wide and centred, whatever the paper.
+  - **The gap sensor is on the right** of the bay, so a roll must be pushed against the right edge, or the printer reports no paper. Settings doesn't need to say where: every roll goes there.
+  - **So a narrower roll** covers the head only from its own left edge to the head's right end. On 58 mm that's from about 17.6 mm on the 71 mm picture; the label's last 4 mm on the right are beyond the head and stay blank.
+  - **`printArea(paperWidthMm)`** gives the picture's columns that land on the paper, with 1 mm kept clear of the paper's left edge, where the label meets its backing. The label is drawn there and the rest of the picture stays white. On 80 mm it's the whole picture; on 58 mm it's dots 149–570, 52.6 mm, where a centred 384-dot picture gave 46 mm and lost the QR code's left edge to the backing.
+- **Paper sizes:** `PaperSize` is the roll's width in mm (80 or 58). On 58 mm the QR code is capped at 180 px, so the text beside it stays readable.
 - **QR code:** at least `MIN_QR_SIZE = 18 mm`, so it reads at arm's length.
 - **Label height:** a setting with a default of 40 mm. Its range is `labelHeightRange(paperType)`: 30–150 mm for labels, 35–150 mm for a roll.
 
 **Paper type (`PaperType`, in Settings):**
 - **`LABELS`** (die-cut, the default):
   - Label mode is on. The printer's gap sensor feeds to the next gap on paper load and after each print.
-  - The bitmap stops `BOTTOM_MARGIN = 6 mm` short of the gap, rounded down to whole bands: `(mm × 8 − 48) / 24 × 24`. Printing closer to the gap makes the printer feed an extra blank label.
+  - In label mode the picture starts about 2 mm down the label (measured; probably `setStarNum(30)`), so it ends 2 mm lower than drawn.
+  - The bitmap stops `BOTTOM_MARGIN = 8 mm` short of the label's end (6 mm, plus that 2 mm), rounded down to whole bands: `(mm × 8 − 64) / 24 × 24`. A 40 mm label's picture is 30 mm and ends 8 mm above the gap. With only 4 mm, the printer fed an extra blank label after each print, as the vendor warns for less than 5–7 mm.
 - **`CONTINUOUS`** (plain roll):
   - **The problem:** in label mode the printer looks for a gap that isn't there, and runs out about 225 mm of paper each time.
   - **Label mode:** the app sends `labelEnable(false)` after the reset, and whenever the setting changes. `MainApplication` collects the setting with `distinctUntilChanged`.
   - **Printing:** with `isLabel = false`.
   - **Height:** the bitmap is the full label height, rounded to the nearest band.
   - **Tear-off:** the last `TEAR_OFF_ROWS = 12 mm` stay blank, because the tear bar is past the print head and the end of each print stays in the printer until the next one.
-- **Die-cut label width:** 80 mm labels are slightly too wide for the test device's paper bay, and 58 mm labels haven't been tried. Continuous roll is what's in use.
+- **Die-cut label width:** 80 mm labels are slightly too wide for the test device's paper bay. 58 x 40 mm labels (on a 61 x 43 mm backing) fit, pushed against the right edge.
 
 **QR content:**
 - **The URL:** the batch's ERPNext page, `batchUrl(baseUrl, batch)` = `https://<host>/app/batch/<batch>`. Scanning it back gives the batch number through `parseScan`.

@@ -7,7 +7,6 @@ import android.content.IntentFilter
 import android.graphics.Bitmap
 import androidx.core.content.ContextCompat
 import bg.butcher.pda.R
-import bg.butcher.pda.data.PaperSize
 import bg.butcher.pda.data.PaperType
 import bg.butcher.pda.data.PdaSettings
 import bg.butcher.pda.data.normaliseBaseUrl
@@ -46,20 +45,20 @@ class QsPdaLabelPrinter(
         val bitmap = withContext(Dispatchers.Default) {
             val paper = current.paperSize
             val rows = labelRows(current.labelHeightMm, current.paperType)
-            renderLabel(label, captions, url, paper.widthPx, rows, paper.maxQrPx)
+            renderLabel(label, captions, url, printArea(paper.widthMm), rows, paper.maxQrPx)
         }
         return send(bitmap, continuous)
     }
 
     /**
-     * The full 570 dots of the head, whatever the paper size, at the label height and paper type in Settings, so
-     * it shows where a label's picture would fall.
+     * The full width of the head, whatever the paper size, at the label height and paper type in Settings, so it
+     * shows where a label's picture would fall.
      */
     override suspend fun printCalibration(): Result<Unit> {
         if (PrintUtils.mComFd <= 0) return Result.failure(PrinterNotReadyException())
         val current = settings()
         val bitmap = withContext(Dispatchers.Default) {
-            renderCalibration(PaperSize.MM_80.widthPx, labelRows(current.labelHeightMm, current.paperType))
+            renderCalibration(HEAD_DOTS, labelRows(current.labelHeightMm, current.paperType))
         }
         return send(bitmap, current.paperType == PaperType.CONTINUOUS)
     }
