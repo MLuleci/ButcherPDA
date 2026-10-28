@@ -19,11 +19,12 @@ val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(na
 
 /**
  * The roll's width. Where it lands under the head comes from `printArea`, as the roll sits against the bay's right
- * edge. On 58 mm the QR code is capped, so the batch number beside it stays readable.
+ * edge. On 58 mm the QR code is capped, so the text beside it keeps the 178 px it had when that paper was a
+ * 384 px picture.
  */
 enum class PaperSize(val widthMm: Int, val maxQrPx: Int) {
     MM_80(80, Int.MAX_VALUE),
-    MM_58(58, 180),
+    MM_58(58, 232),
 }
 
 /**

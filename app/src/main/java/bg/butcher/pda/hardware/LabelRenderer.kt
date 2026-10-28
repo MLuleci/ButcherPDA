@@ -19,7 +19,8 @@ import kotlin.math.ceil
 // The printer's resolution
 const val DOTS_PER_MM = 8
 
-private const val PADDING = 8
+// No padding around the label: there's blank paper outside the picture on every side (the head's or the edge's
+// margin, the 2 mm at the top and the blank before the gap or tear), and the QR code has its quiet zone
 private const val GAP = 10
 
 // In label mode the picture starts about 2 mm down the label (measured with the test ruler; probably
@@ -61,14 +62,21 @@ private fun layout(text: String, paint: TextPaint, width: Int, maxLines: Int): S
         .setEllipsize(TextUtils.TruncateAt.END)
         .build()
 
-/** No character set hint: the URL is ASCII, and a UTF-8 hint would make the scan engine add an ECI prefix. */
-private fun qrBitmap(content: String, size: Int): Bitmap {
+/**
+ * At most [maxSize] square, at a whole number of dots per module. Asked for a size, zxing does the same but centres
+ * the code in it, which left up to 2 mm of white beside the quiet zone, so it's encoded at one dot per module and
+ * scaled here. No character set hint: the URL is ASCII, and a UTF-8 hint would make the scan engine add an ECI
+ * prefix.
+ */
+private fun qrBitmap(content: String, maxSize: Int): Bitmap {
     val hints = mapOf(EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.M, EncodeHintType.MARGIN to 1)
-    val matrix = QRCodeWriter().encode(content, BarcodeFormat.QR_CODE, size, size, hints)
-    val pixels = IntArray(matrix.width * matrix.height) { i ->
-        if (matrix.get(i % matrix.width, i / matrix.width)) Color.BLACK else Color.WHITE
+    val matrix = QRCodeWriter().encode(content, BarcodeFormat.QR_CODE, 0, 0, hints)
+    val scale = (maxSize / matrix.width).coerceAtLeast(1)
+    val side = matrix.width * scale
+    val pixels = IntArray(side * side) { i ->
+        if (matrix.get(i % side / scale, i / side / scale)) Color.BLACK else Color.WHITE
     }
-    return Bitmap.createBitmap(pixels, matrix.width, matrix.height, Bitmap.Config.ARGB_8888)
+    return Bitmap.createBitmap(pixels, side, side, Bitmap.Config.ARGB_8888)
 }
 
 private class TextBlock(val lines: List<StaticLayout>) {
@@ -114,13 +122,11 @@ fun labelRows(labelHeightMm: Int, paperType: PaperType): LabelRows = when (paper
 }
 
 /**
- * The QR code's side: what's left beside the dates at their smallest, up to the label's [rows] and [maxSize].
- * [datesWidth] is the widest of the lines that must print whole.
+ * The most the QR code's side can be: what's left beside the dates at their smallest, up to the label's [rows]
+ * and [maxSize]. [datesWidth] is the widest of the lines that must print whole.
  */
-fun qrSize(width: Int, rows: LabelRows, datesWidth: Int, maxSize: Int = Int.MAX_VALUE): Int {
-    val contentHeight = rows.label - 2 * PADDING
-    return minOf(contentHeight, width - 2 * PADDING - GAP - datesWidth, maxSize).coerceAtLeast(0)
-}
+fun qrSize(width: Int, rows: LabelRows, datesWidth: Int, maxSize: Int = Int.MAX_VALUE): Int =
+    minOf(rows.label, width - GAP - datesWidth, maxSize).coerceAtLeast(0)
 
 /**
  * The whole label as one bitmap, so it prints as one job with one feed, and Cyrillic needs no printer font.
@@ -140,7 +146,7 @@ fun renderLabel(
     maxQrSize: Int = Int.MAX_VALUE,
 ): Bitmap {
     val width = area.width
-    val contentHeight = rows.label - 2 * PADDING
+    val contentHeight = rows.label
     val wholeLines = listOfNotNull(
         label.quantity,
         label.productionDate?.let { "${captions.produced}: ${shortDate(it)}" },
@@ -149,11 +155,12 @@ fun renderLabel(
 
     // Room for the dates at their smallest comes first; LabelRendererTest checks the QR code still clears
     // MIN_QR_SIZE on both paper sizes
-    val qrSize = if (qrContent == null) 0 else {
-        qrSize(width, rows, widest(wholeLines, MIN_TEXT_SIZE), maxQrSize)
-    }
-    val textLeft = PADDING + if (qrSize > 0) qrSize + GAP else 0
-    val textWidth = width - textLeft - PADDING
+    val qr = qrContent
+        ?.let { qrSize(width, rows, widest(wholeLines, MIN_TEXT_SIZE), maxQrSize) }
+        ?.takeIf { it > 0 }
+        ?.let { qrBitmap(qrContent, it) }
+    val textLeft = qr?.let { it.width + GAP } ?: 0
+    val textWidth = width - textLeft
 
     var size = MAX_TEXT_SIZE
     var text = textBlock(label, wholeLines, textWidth, size)
@@ -167,11 +174,8 @@ fun renderLabel(
     canvas.drawColor(Color.WHITE)
     // Everything below is drawn as if the paper started at the bitmap's left edge
     canvas.translate(area.left.toFloat(), 0f)
-    qrContent?.takeIf { qrSize > 0 }?.let {
-        val top = PADDING + (contentHeight - qrSize) / 2
-        canvas.drawBitmap(qrBitmap(it, qrSize), PADDING.toFloat(), top.toFloat(), null)
-    }
-    var top = PADDING + ((contentHeight - text.height) / 2).coerceAtLeast(0)
+    qr?.let { canvas.drawBitmap(it, 0f, ((contentHeight - it.height) / 2).toFloat(), null) }
+    var top = ((contentHeight - text.height) / 2).coerceAtLeast(0)
     text.lines.forEach { line ->
         canvas.save()
         canvas.translate(textLeft.toFloat(), top.toFloat())

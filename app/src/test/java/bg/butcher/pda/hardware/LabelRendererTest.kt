@@ -31,7 +31,7 @@ class LabelRendererTest {
         val rows = labelRows(40, PaperType.LABELS)
         val size = qrSize(printArea(PaperSize.MM_80.widthMm).width, rows, datesWidth)
 
-        assertEquals(rows.label - 16, size)
+        assertEquals(rows.label, size)
     }
 
     @Test
