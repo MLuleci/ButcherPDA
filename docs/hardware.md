@@ -62,7 +62,7 @@ The PDA's scanner and printer share one serial port, driven by the vendor SDK `a
 
 **One bitmap per label.** `isLabel = true` adds "feed to the next gap" (`1D 0C`) to every print call, so printing line by line would make one label per line. The app draws the whole label on `Dispatchers.Default`, then calls `printBitmap(1, bitmap, isLabel)` once on the main thread.
 - **Contents:** QR code on the left, then product name (up to 2 lines), batch number, quantity with unit, `P:`/`E:` dates (`dd.MM.yyyy`, captions translated) and the Stock Entry ID.
-- **No padding:** the QR code and text go right to the picture's edges, since there's blank paper outside it on every side. The QR code is a whole number of dots per module, at the top-left of its square: zxing, asked for a size, centres the code in it instead, which left up to 2 mm of white beside its 1-module quiet zone.
+- **No padding:** the QR code and text go right to the picture's edges, since there's blank paper outside it on every side. The QR code is a whole number of dots per module, at the top-left of its square: zxing, asked for a size, centres the code in it instead, which left up to 2 mm of white beside its 1-module quiet zone. The QR code and the text both start at the top of the label, so the code lines up with the first line, and any room left is at the bottom.
 - **Fitting:**
   - The quantity and both dates always print whole.
   - The text shrinks from 28 to 20 px to fit.
@@ -82,7 +82,7 @@ The PDA's scanner and printer share one serial port, driven by the vendor SDK `a
   - **The gap sensor is on the right** of the bay, so a roll must be pushed against the right edge, or the printer reports no paper. Settings doesn't need to say where: every roll goes there.
   - **So a narrower roll** covers the head only from its own left edge to the head's right end. On 58 mm that's from about 17.6 mm on the 71 mm picture; the label's last 4 mm on the right are beyond the head and stay blank.
   - **`printArea(paperWidthMm)`** gives the picture's columns that land on the paper, with 1 mm kept clear of the paper's left edge, where the label meets its backing. The label is drawn there and the rest of the picture stays white. On 80 mm it's the whole picture; on 58 mm it's dots 149–570, 52.6 mm, where a centred 384-dot picture gave 46 mm and lost the QR code's left edge to the backing.
-- **Paper sizes:** `PaperSize` is the roll's width in mm (80 or 58). On 58 mm the QR code is capped at 232 px (29 mm), which leaves the text beside it at least 178 px, what it had when 58 mm was a 384 px picture.
+- **Paper sizes:** `PaperSize` is the roll's width in mm (80 or 58). On 58 mm the QR code is capped at 180 px, so the text beside it has more room.
 - **QR code:** at least `MIN_QR_SIZE = 18 mm`, so it reads at arm's length.
 - **Label height:** a setting with a default of 40 mm. Its range is `labelHeightRange(paperType)`: 30–150 mm for labels, 35–150 mm for a roll.
 

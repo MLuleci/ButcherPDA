@@ -27,7 +27,7 @@ As of commit `d842999` (October 2026): all the planned phases (0–7) are implem
   - a file signed with a different key is refused.
 - **The Android 6 install path:** the `file://` URI in the external files folder. The first attempt with a `content://` URI found no installer, even with "Unknown sources" on.
 - **58 mm die-cut labels with the measured print area:** the whole QR code on the label, the text not cut short, and no extra blank label after each print. Earlier tests clipped the QR code's left edge and fed a blank label each time.
-- **Labels without padding:** the QR code at the label's left edge (about 1 mm in on 58 mm), about 26-27 mm on a 58 x 40 mm label (a whole number of dots per module, up to the 29 mm cap), and both still scanning.
+- **Labels without padding:** the QR code at the label's left edge (about 1 mm in on 58 mm), the same size as before, at the top beside the first line of text, and still scanning.
 - **No "Batch not found" after printing:** on Details, printing a label, or printing with the roll away from the right edge, no longer shows it, and a scan with the trigger still works.
 - **The emulator** with `useFakeErp=true`: pick a BOM, see the expiry filled in, see the ingredient table.
 

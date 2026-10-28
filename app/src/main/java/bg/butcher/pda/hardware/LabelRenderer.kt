@@ -130,9 +130,9 @@ fun qrSize(width: Int, rows: LabelRows, datesWidth: Int, maxSize: Int = Int.MAX_
 
 /**
  * The whole label as one bitmap, so it prints as one job with one feed, and Cyrillic needs no printer font.
- * The QR code is as large as the label allows on the left. The quantity and both dates always print whole beside
- * it, at the largest size that fits; the product name, batch number and Stock Entry ID may be cut short.
- * Below the label's [rows], the bitmap is blank.
+ * The QR code is as large as the label allows on the left, up to [maxQrSize], at the top. The quantity and both
+ * dates always print whole beside it, at the largest size that fits; the product name, batch number and Stock
+ * Entry ID may be cut short. Below the label's [rows], the bitmap is blank.
  *
  * The bitmap is always [HEAD_DOTS] wide, as the printer centres it under the head, and the label is drawn in
  * [area], the part that lands on the paper ([printArea]). The rest stays blank.
@@ -174,8 +174,9 @@ fun renderLabel(
     canvas.drawColor(Color.WHITE)
     // Everything below is drawn as if the paper started at the bitmap's left edge
     canvas.translate(area.left.toFloat(), 0f)
-    qr?.let { canvas.drawBitmap(it, 0f, ((contentHeight - it.height) / 2).toFloat(), null) }
-    var top = ((contentHeight - text.height) / 2).coerceAtLeast(0)
+    // Both from the top, so the QR code lines up with the first line of text
+    qr?.let { canvas.drawBitmap(it, 0f, 0f, null) }
+    var top = 0
     text.lines.forEach { line ->
         canvas.save()
         canvas.translate(textLeft.toFloat(), top.toFloat())
