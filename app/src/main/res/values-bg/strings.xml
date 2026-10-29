@@ -125,6 +125,8 @@
     <string name="invalid_label_height">Въведете цяло число от %1$d до %2$d.</string>
     <string name="settings_saved">Настройките са запазени</string>
     <string name="settings_save_failed">Настройките не бяха запазени. Опитайте отново.</string>
+    <string name="calibration_print">Тестова линийка</string>
+    <string name="calibration_sent">Тестовата линийка е изпратена към принтера.</string>
     <string name="app_version">Версия %1$s</string>
     <string name="update_check">Проверка за обновления</string>
     <string name="update_install">Изтегляне и инсталиране</string>

@@ -128,7 +128,7 @@ class FakeErpRepositoryTest {
         val lastWeek = repository.searchBatches("", BatchFilters(producedWithinDaysText = "7")).getOrThrow()
         val byExpiry = repository.searchBatches("", noDayLimit.withSort(BatchSort.EXPIRES)).getOrThrow()
 
-        assertTrue(hidingExpired.all { it.expiryDate != null && it.expiryDate!! >= today })
+        assertTrue(hidingExpired.all { it.expiryDate != null && it.expiryDate >= today })
         assertTrue(lastWeek.all { it.manufacturingDate!! >= today.minus(7, DateTimeUnit.DAY) })
         val expiries = byExpiry.mapNotNull { it.expiryDate }
         assertEquals(expiries.sorted(), expiries)

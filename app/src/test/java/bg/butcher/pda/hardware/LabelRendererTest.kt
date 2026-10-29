@@ -18,7 +18,7 @@ class LabelRendererTest {
             // The shortest label allowed, too
             listOf(DEFAULT_LABEL_HEIGHT_MM, labelHeightRange(type).first).forEach { mm ->
                 PaperSize.entries.forEach { paper ->
-                    val size = qrSize(paper.widthPx, labelRows(mm, type), datesWidth, paper.maxQrPx)
+                    val size = qrSize(printArea(paper.widthMm).width, labelRows(mm, type), datesWidth, paper.maxQrPx)
                     assertTrue("$paper $type at $mm mm gives a $size px QR code", size >= MIN_QR_SIZE)
                 }
             }
@@ -29,9 +29,9 @@ class LabelRendererTest {
     fun qrCode_fillsTheHeightWhenThereIsRoom() {
         // 80 x 40 mm: limited by the height, not by the dates
         val rows = labelRows(40, PaperType.LABELS)
-        val size = qrSize(PaperSize.MM_80.widthPx, rows, datesWidth)
+        val size = qrSize(printArea(PaperSize.MM_80.widthMm).width, rows, datesWidth)
 
-        assertEquals(rows.label - 16, size)
+        assertEquals(rows.label, size)
     }
 
     @Test
@@ -41,11 +41,9 @@ class LabelRendererTest {
                 val rows = labelRows(mm, type)
                 assertEquals("$type at $mm mm", 0, rows.label % 24)
                 assertEquals("$type at $mm mm", 0, rows.bitmap % 24)
-                PaperSize.entries.forEach { paper ->
-                    // What PrintUtils.draw2PxPoint writes, against what it allocates
-                    val needed = 3 + rows.bitmap / 24 * (6 + 3 * paper.widthPx)
-                    assertTrue("$paper $type at $mm mm", needed <= paper.widthPx * rows.bitmap / 8 + 1200)
-                }
+                // What PrintUtils.draw2PxPoint writes, against what it allocates; every picture is the head's width
+                val needed = 3 + rows.bitmap / 24 * (6 + 3 * HEAD_DOTS)
+                assertTrue("$type at $mm mm", needed <= HEAD_DOTS * rows.bitmap / 8 + 1200)
             }
         }
     }
@@ -55,7 +53,8 @@ class LabelRendererTest {
         for (mm in labelHeightRange(PaperType.LABELS)) {
             val rows = labelRows(mm, PaperType.LABELS)
             assertEquals(rows.label, rows.bitmap)
-            assertTrue("$mm mm leaves too little margin", rows.bitmap <= mm * DOTS_PER_MM - 6 * DOTS_PER_MM)
+            // The vendor's 5-7 mm, after the picture's 2 mm shift down in label mode
+            assertTrue("$mm mm leaves too little margin", rows.bitmap <= mm * DOTS_PER_MM - 8 * DOTS_PER_MM)
         }
     }
 
@@ -80,9 +79,27 @@ class LabelRendererTest {
     @Test
     fun qrCode_isCappedOn58mmSoTheTextHasRoom() {
         val paper = PaperSize.MM_58
-        val size = qrSize(paper.widthPx, labelRows(DEFAULT_LABEL_HEIGHT_MM, PaperType.LABELS), datesWidth, paper.maxQrPx)
+        val rows = labelRows(DEFAULT_LABEL_HEIGHT_MM, PaperType.LABELS)
+        val size = qrSize(printArea(paper.widthMm).width, rows, datesWidth, paper.maxQrPx)
 
         assertEquals(paper.maxQrPx, size)
         assertTrue("$size px", size >= MIN_QR_SIZE)
+    }
+
+    @Test
+    fun printArea_80mmIsTheWholeHead() {
+        assertEquals(PrintArea(0, HEAD_DOTS), printArea(80))
+    }
+
+    @Test
+    fun printArea_58mmStartsAtTheRollsLeftEdge() {
+        // Measured with the test ruler: the roll, pushed right, starts at about 17 mm on the 71 mm picture
+        val area = printArea(58)
+
+        assertEquals(HEAD_DOTS, area.right)
+        val paperEdgeMm = area.left / DOTS_PER_MM.toDouble() - 1
+        assertTrue("$paperEdgeMm mm", paperEdgeMm in 17.0..18.0)
+        // 53 mm of label to print on, against 46 mm when the picture was 384 dots, centred
+        assertTrue("${area.width} dots", area.width >= 52 * DOTS_PER_MM)
     }
 }

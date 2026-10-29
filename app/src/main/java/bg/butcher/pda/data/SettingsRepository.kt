@@ -18,12 +18,12 @@ import java.io.IOException
 val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 /**
- * The label roll; the width is the printer's maximum for that paper. On 58 mm the QR code is capped, so the
- * batch number beside it stays readable.
+ * The roll's width. Where it lands under the head comes from `printArea`, as the roll sits against the bay's right
+ * edge. On 58 mm the QR code is capped, so the text beside it has more room.
  */
-enum class PaperSize(val widthPx: Int, val maxQrPx: Int) {
-    MM_80(570, Int.MAX_VALUE),
-    MM_58(384, 180),
+enum class PaperSize(val widthMm: Int, val maxQrPx: Int) {
+    MM_80(80, Int.MAX_VALUE),
+    MM_58(58, 180),
 }
 
 /**

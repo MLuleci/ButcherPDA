@@ -21,6 +21,8 @@ import bg.butcher.pda.data.UpdateRepository
 import bg.butcher.pda.data.normaliseApiKey
 import bg.butcher.pda.data.normaliseBaseUrl
 import bg.butcher.pda.data.normaliseLabelHeight
+import bg.butcher.pda.hardware.FakeLabelPrinter
+import bg.butcher.pda.hardware.LabelPrinter
 import bg.butcher.pda.ui.state.JobSlot
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -88,6 +90,7 @@ class SettingsViewModel(
     private val settingsRepository: SettingsRepository,
     private val updateRepository: UpdateRepository,
     private val checkApk: (File, Int) -> ApkProblem?,
+    private val labelPrinter: LabelPrinter = FakeLabelPrinter(),
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
@@ -164,6 +167,19 @@ class SettingsViewModel(
     // One check or download at a time
     private val updateJob = JobSlot(viewModelScope)
 
+    private val printJob = JobSlot(viewModelScope)
+
+    /** Prints the ruler with the saved paper settings, so save any changes first. */
+    fun printCalibration() {
+        if (printJob.isActive) return
+        printJob.replace {
+            val result = labelPrinter.printCalibration()
+            _effects.send(
+                SettingsUiEffect.ShowToast(if (result.isSuccess) R.string.calibration_sent else R.string.printer_not_ready)
+            )
+        }
+    }
+
     fun checkForUpdate() {
         if (updateJob.isActive) return
         _uiState.update { it.copy(update = UpdateState.Checking) }
@@ -229,6 +245,7 @@ class SettingsViewModel(
                     settingsRepository = container.settingsRepository,
                     updateRepository = container.updateRepository,
                     checkApk = container.updateInstaller::check,
+                    labelPrinter = container.labelPrinter,
                 )
             }
         }

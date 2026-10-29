@@ -155,6 +155,11 @@ fun DetailsScreen(
                         stringResource(R.string.production_date_label),
                         batch.manufacturingDate?.let(::shortDate) ?: noDate,
                     )
+                    // Always shown: the banner above only appears when the batch has expired or soon will
+                    LabelledValue(
+                        stringResource(R.string.expiry_date_label),
+                        batch.expiryDate?.let(::shortDate) ?: noDate,
+                    )
                     batch.referenceName?.let { LabelledValue(stringResource(R.string.stock_entry_label), it) }
                     IngredientList(state.ingredients, onRetryIngredients)
                 }

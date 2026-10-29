@@ -49,6 +49,9 @@ fun BatchDetails.toLabel() = LabelData(
 
 fun interface LabelPrinter {
     suspend fun print(label: LabelData): Result<Unit>
+
+    /** A ruler across the whole printable width, to see where the paper sits. Only the device printer has one. */
+    suspend fun printCalibration(): Result<Unit> = Result.success(Unit)
 }
 
 class FakeLabelPrinter : LabelPrinter {

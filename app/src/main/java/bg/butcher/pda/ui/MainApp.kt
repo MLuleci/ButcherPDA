@@ -156,6 +156,7 @@ fun MainApp(
                     onSave = viewModel::save,
                     onCheckForUpdate = viewModel::checkForUpdate,
                     onInstallUpdate = viewModel::installUpdate,
+                    onPrintCalibration = viewModel::printCalibration,
                     modifier = Modifier.fillMaxSize()
                 )
             }

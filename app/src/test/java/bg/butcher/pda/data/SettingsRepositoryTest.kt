@@ -39,7 +39,7 @@ class SettingsRepositoryTest {
     @Test
     fun paperSize_isSavedWithTheOtherSettings() = runTest {
         val settings = PdaSettings(
-            "https://erp.example.bg/", "key:secret", PaperSize.MM_58, labelHeightMm = 30, PaperType.CONTINUOUS,
+            "https://erp.example.bg/", "key:secret", PaperSize.MM_58, labelHeightMm = 35, PaperType.CONTINUOUS,
         )
 
         repository.update(settings)

@@ -195,6 +195,7 @@ fun SettingsScreen(
     onCheckForUpdate: () -> Unit,
     onInstallUpdate: () -> Unit,
     modifier: Modifier = Modifier,
+    onPrintCalibration: () -> Unit = {},
 ) {
     Column(modifier = modifier) {
         Column(
@@ -252,6 +253,13 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 suffix = stringResource(R.string.millimetres),
             )
+            // Calibration aid: prints with the saved paper settings
+            OutlinedButton(
+                onClick = onPrintCalibration,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+            ) {
+                Text(stringResource(R.string.calibration_print))
+            }
             HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
             UpdateSection(
                 state = uiState.update,

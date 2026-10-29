@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.Bitmap
 import androidx.core.content.ContextCompat
 import bg.butcher.pda.R
 import bg.butcher.pda.data.PaperType
@@ -30,7 +31,7 @@ class QsPdaLabelPrinter(
     private val settings: suspend () -> PdaSettings,
 ) : LabelPrinter {
     override suspend fun print(label: LabelData): Result<Unit> {
-        if (PrintUtils.mComFd <= 0 || !PrintUtils.isCanprint) return Result.failure(PrinterNotReadyException())
+        if (PrintUtils.mComFd <= 0) return Result.failure(PrinterNotReadyException())
 
         val captions = LabelCaptions(
             produced = context.getString(R.string.label_caption_produced),
@@ -44,9 +45,25 @@ class QsPdaLabelPrinter(
         val bitmap = withContext(Dispatchers.Default) {
             val paper = current.paperSize
             val rows = labelRows(current.labelHeightMm, current.paperType)
-            renderLabel(label, captions, url, paper.widthPx, rows, paper.maxQrPx)
+            renderLabel(label, captions, url, printArea(paper.widthMm), rows, paper.maxQrPx)
         }
+        return send(bitmap, continuous)
+    }
 
+    /**
+     * The full width of the head, whatever the paper size, at the label height and paper type in Settings, so it
+     * shows where a label's picture would fall.
+     */
+    override suspend fun printCalibration(): Result<Unit> {
+        if (PrintUtils.mComFd <= 0) return Result.failure(PrinterNotReadyException())
+        val current = settings()
+        val bitmap = withContext(Dispatchers.Default) {
+            renderCalibration(HEAD_DOTS, labelRows(current.labelHeightMm, current.paperType))
+        }
+        return send(bitmap, current.paperType == PaperType.CONTINUOUS)
+    }
+
+    private suspend fun send(bitmap: Bitmap, continuous: Boolean): Result<Unit> {
         // The print call returns at once; the only result is a status broadcast, which may not come
         val status = withTimeoutOrNull(4.seconds) {
             callbackFlow {
@@ -59,7 +76,14 @@ class QsPdaLabelPrinter(
                     context, receiver, IntentFilter(STATUS_ACTION), ContextCompat.RECEIVER_EXPORTED,
                 )
                 // Its handlers need the main looper
-                withContext(Dispatchers.Main) { PrintUtils.printBitmap(1, bitmap, !continuous) }
+                withContext(Dispatchers.Main) {
+                    // The SDK only learns the printer's state from what the printer happens to send, and never asks.
+                    // After the lid is opened it's left at "no paper" until the printer reports something else, which
+                    // closing the lid doesn't do, and the SDK silently drops jobs while it says so. Clearing it lets
+                    // the job through; with no paper the printer reports that again, and the broadcast says so.
+                    PrintUtils.isCanprint = true
+                    PrintUtils.printBitmap(1, bitmap, !continuous)
+                }
                 awaitClose { context.unregisterReceiver(receiver) }
             }.first()
         }
